@@ -1083,7 +1083,7 @@
 /* High DPI displays */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .hero-section {
-    background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 50%, #E3F2FD 100%);
+    background-color: var(--white);
   }
   
   .floating-card {
