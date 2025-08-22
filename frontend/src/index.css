@@ -11,6 +11,16 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Custom CSS Variables for Auth Forms */
+  --primary-blue: #0D6EFD;
+  --primary-purple: #0B5ED7;
+  --text-dark: #1a202c;
+  --text-light-gray: #718096;
+  --border-color: #e2e8f0;
+  --white: #ffffff;
+  --error-red: #dc2626;
+  --success-green: #059669;
 }
 
 a {

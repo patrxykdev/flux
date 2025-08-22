@@ -63,6 +63,17 @@ const HomePage: React.FC = () => {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
+  // Function to switch between forms
+  const switchToRegister = () => {
+    setIsLoginModalOpen(false);
+    setIsRegisterModalOpen(true);
+  };
+
+  const switchToLogin = () => {
+    setIsRegisterModalOpen(false);
+    setIsLoginModalOpen(true);
+  };
+
   // Refs for scroll animations on feature cards
   const featureRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -271,10 +282,10 @@ const HomePage: React.FC = () => {
 
       {/* MODALS: These will now work correctly */}
       <Modal isOpen={isRegisterModalOpen} onClose={() => setIsRegisterModalOpen(false)}>
-        <RegisterForm />
+        <RegisterForm onClose={() => setIsRegisterModalOpen(false)} onSwitchToLogin={switchToLogin} />
       </Modal>
       <Modal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)}>
-        <LoginForm />
+        <LoginForm onClose={() => setIsLoginModalOpen(false)} onSwitchToRegister={switchToRegister} />
       </Modal>
     </div>
   );

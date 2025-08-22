@@ -11,32 +11,37 @@
   justify-content: center;
   z-index: 1000;
   backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.modal-overlay.modal-enter {
+  opacity: 1;
+}
+
+.modal-overlay.modal-exit {
+  opacity: 0;
 }
 
 .modal-content {
   position: relative;
-  background: var(--white);
+  background: transparent;
   padding: 0; /* Let the form inside handle padding */
   border-radius: 12px;
   width: 100%;
   max-width: 450px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  transform: scale(0.9) translateY(20px);
+  opacity: 0;
+  transition: all 0.2s ease-in-out;
 }
 
-.modal-close-button {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px;
-  width: 32px;
-  height: 32px;
-  color: var(--text-light-gray);
-  transition: color 0.2s ease;
+.modal-content.modal-enter {
+  transform: scale(1) translateY(0);
+  opacity: 1;
 }
 
-.modal-close-button:hover {
-  color: var(--text-dark);
+.modal-content.modal-exit {
+  transform: scale(0.9) translateY(20px);
+  opacity: 0;
 }
