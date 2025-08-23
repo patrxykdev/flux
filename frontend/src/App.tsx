@@ -2,7 +2,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './components/homepage/HomePage';
 import Dashboard from './components/dashboard/Dashboard';
-import StrategyBuilder from './components/builder/StrategyBuilder'; // Import the new page
+import StrategyBuilder from './components/builder/StrategyBuilder';
+import DashboardLayout from './components/common/DashboardLayout';
 import './App.css'; 
 import BacktestPage from './components/backtester/BacktestPage';
 import type { JSX } from 'react';
@@ -18,6 +19,28 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+// Placeholder components for new pages
+const PortfolioPage = () => (
+  <div style={{ padding: '2rem', textAlign: 'center' }}>
+    <h1>Portfolio</h1>
+    <p>Portfolio management page coming soon...</p>
+  </div>
+);
+
+const AnalyticsPage = () => (
+  <div style={{ padding: '2rem', textAlign: 'center' }}>
+    <h1>Analytics</h1>
+    <p>Analytics page coming soon...</p>
+  </div>
+);
+
+const SettingsPage = () => (
+  <div style={{ padding: '2rem', textAlign: 'center' }}>
+    <h1>Settings</h1>
+    <p>Settings page coming soon...</p>
+  </div>
+);
+
 function App() {
   const token = localStorage.getItem('accessToken');
 
@@ -29,18 +52,62 @@ function App() {
           {/* If not logged in, the root path '/' shows the HomePage */}
           <Route path="/" element={token ? <Navigate to="/dashboard" /> : <HomePage />} />
           
-          {/* Dashboard and Builder pages are protected */}
+          {/* Dashboard Layout Routes - All pages with sidebar except settings */}
           <Route 
             path="/dashboard" 
-            element={<ProtectedRoute><Dashboard /></ProtectedRoute>} 
-          />
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            } 
+          >
+            <Route index element={<Dashboard />} />
+          </Route>
           <Route 
             path="/builder" 
-            element={<ProtectedRoute><StrategyBuilder /></ProtectedRoute>} 
-          />
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            } 
+          >
+            <Route index element={<StrategyBuilder />} />
+          </Route>
           <Route 
             path="/backtest" 
-            element={<ProtectedRoute><BacktestPage /></ProtectedRoute>} 
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            } 
+          >
+            <Route index element={<BacktestPage />} />
+          </Route>
+          <Route 
+            path="/portfolio" 
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            } 
+          >
+            <Route index element={<PortfolioPage />} />
+          </Route>
+          <Route 
+            path="/analytics" 
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            } 
+          >
+            <Route index element={<AnalyticsPage />} />
+          </Route>
+          
+          {/* Settings page - No sidebar */}
+          <Route 
+            path="/settings" 
+            element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} 
           />
         </Routes>
         <Toaster

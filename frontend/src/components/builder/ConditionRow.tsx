@@ -11,34 +11,8 @@ interface ConditionRowProps {
 const ConditionRow: React.FC<ConditionRowProps> = ({ condition }) => {
   const { updateCondition, removeCondition } = useBuilderStore();
   
-  // Check if the indicator has parameters
   const hasParams = INDICATOR_PARAMS[condition.indicator as keyof typeof INDICATOR_PARAMS] && 
     Object.keys(INDICATOR_PARAMS[condition.indicator as keyof typeof INDICATOR_PARAMS]).length > 0;
-
-  // Helper function for operator symbols (commented out as it's not currently used)
-  // const getOperatorSymbol = (operator: OperatorType) => {
-  //   switch (operator) {
-  //     case 'less_than': return '<';
-  //     case 'greater_than': return '>';
-  //     case 'crosses_above': return 'Crosses Above';
-  //     case 'crosses_below': return 'Crosses Below';
-  //     case 'equals': return '=';
-  //     case 'not_equals': return '≠';
-  //     case 'between': return 'Between';
-  //     case 'outside': return 'Outside';
-  //     default: return operator;
-  //   }
-  // };
-
-  // Helper function for indicator display names (commented out as it's not currently used)
-  // const getIndicatorDisplayName = (indicator: IndicatorType) => {
-  //   switch (indicator) {
-  //     case 'Bollinger_Bands': return 'Bollinger Bands';
-  //     case 'Williams_R': return 'Williams %R';
-  //     case 'Close': return 'Price';
-  //     default: return indicator;
-  //   }
-  // };
 
   const isCrossOperator = (operator: OperatorType) => {
     return operator === 'crosses_above' || operator === 'crosses_below';
@@ -53,22 +27,28 @@ const ConditionRow: React.FC<ConditionRowProps> = ({ condition }) => {
 
     return (
       <div className="parameter-inputs">
-        {Object.entries(params).map(([key, defaultValue]) => (
-          <div key={key} className="parameter-input">
-            <label>{key.replace('_', ' ').toUpperCase()}:</label>
-            <input
-              type="number"
-              value={condition[key as keyof Condition] ?? defaultValue}
-              onChange={(e) => {
-                const inputValue = e.target.value;
-                const value = inputValue === '' ? undefined : (parseInt(inputValue) || defaultValue);
-                updateCondition(condition.id, key as keyof Condition, value as any);
-              }}
-              min="1"
-              max="200"
-            />
-          </div>
-        ))}
+        <div className="parameter-header">
+          <span className="parameter-title">Parameters</span>
+        </div>
+        <div className="parameter-grid">
+          {Object.entries(params).map(([key, defaultValue]) => (
+            <div key={key} className="parameter-input">
+              <label>{key.replace('_', ' ').toUpperCase()}:</label>
+              <input
+                type="number"
+                value={condition[key as keyof Condition] ?? defaultValue}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  const value = inputValue === '' ? undefined : (parseInt(inputValue) || defaultValue);
+                  updateCondition(condition.id, key as keyof Condition, value as any);
+                }}
+                min="1"
+                max="200"
+                className="parameter-field"
+              />
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -78,11 +58,15 @@ const ConditionRow: React.FC<ConditionRowProps> = ({ condition }) => {
 
     return (
       <div className="cross-comparison-inputs">
+        <div className="cross-header">
+          <span className="cross-title">Cross Comparison</span>
+        </div>
         <div className="cross-indicator-select">
           <label>Crosses:</label>
           <select 
             value={condition.compareIndicator || 'Close'}
             onChange={(e) => updateCondition(condition.id, 'compareIndicator', e.target.value as IndicatorType)}
+            className="cross-select"
           >
             <option value="Close">Price</option>
             <option value="SMA">SMA</option>
@@ -105,13 +89,14 @@ const ConditionRow: React.FC<ConditionRowProps> = ({ condition }) => {
                 <input
                   type="number"
                   value={String(condition[`compare${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof Condition] ?? defaultValue)}
-                                  onChange={(e) => {
-                  const inputValue = e.target.value;
-                  const value = inputValue === '' ? undefined : (parseInt(inputValue) || defaultValue);
-                  updateCondition(condition.id, `compare${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof Condition, value as string | number | undefined);
-                }}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    const value = inputValue === '' ? undefined : (parseInt(inputValue) || defaultValue);
+                    updateCondition(condition.id, `compare${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof Condition, value as string | number | undefined);
+                  }}
                   min="1"
                   max="200"
+                  className="parameter-field"
                 />
               </div>
             ))}
@@ -124,31 +109,11 @@ const ConditionRow: React.FC<ConditionRowProps> = ({ condition }) => {
   const renderValueInput = () => {
     if (isCrossOperator(condition.operator)) {
       return (
-        <input 
-          type="text" 
-          className="form-input value-input"
-          placeholder="Value (optional)"
-          value={condition.compareValue || ''}
-          onChange={(e) => updateCondition(condition.id, 'compareValue', e.target.value)}
-        />
-      );
-    }
-
-    if (condition.operator === 'between' || condition.operator === 'outside') {
-      return (
-        <div className="range-inputs">
+        <div className="value-input-wrapper">
           <input 
             type="text" 
             className="form-input value-input"
-            placeholder="Min"
-            value={condition.value}
-            onChange={(e) => updateCondition(condition.id, 'value', e.target.value)}
-          />
-          <span>and</span>
-          <input 
-            type="text" 
-            className="form-input value-input"
-            placeholder="Max"
+            placeholder="Value (optional)"
             value={condition.compareValue || ''}
             onChange={(e) => updateCondition(condition.id, 'compareValue', e.target.value)}
           />
@@ -156,53 +121,91 @@ const ConditionRow: React.FC<ConditionRowProps> = ({ condition }) => {
       );
     }
 
+    if (condition.operator === 'between' || condition.operator === 'outside') {
+      return (
+        <div className="range-inputs">
+          <div className="range-input-group">
+            <label>Min</label>
+            <input 
+              type="text" 
+              className="form-input value-input"
+              placeholder="Min"
+              value={condition.value}
+              onChange={(e) => updateCondition(condition.id, 'value', e.target.value)}
+            />
+          </div>
+          <div className="range-separator">
+            <span>and</span>
+          </div>
+          <div className="range-input-group">
+            <label>Max</label>
+            <input 
+              type="text" 
+              className="form-input value-input"
+              placeholder="Max"
+              value={condition.compareValue || ''}
+              onChange={(e) => updateCondition(condition.id, 'compareValue', e.target.value)}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <input 
-        type="text" 
-        className="form-input value-input"
-        placeholder="Value"
-        value={condition.value}
-        onChange={(e) => updateCondition(condition.id, 'value', e.target.value)}
-      />
+      <div className="value-input-wrapper">
+        <input 
+          type="text" 
+          className="form-input value-input"
+          placeholder="Value"
+          value={condition.value}
+          onChange={(e) => updateCondition(condition.id, 'value', e.target.value)}
+        />
+      </div>
     );
   };
 
   return (
     <div className="condition-row">
       <div className="condition-main">
-        <select 
-          className="form-select indicator-select"
-          value={condition.indicator}
-          onChange={(e) => updateCondition(condition.id, 'indicator', e.target.value as IndicatorType)}
-        >
-          <option value="RSI">RSI</option>
-          <option value="MACD">MACD</option>
-          <option value="SMA">SMA</option>
-          <option value="EMA">EMA</option>
-          <option value="Bollinger_Bands">Bollinger Bands</option>
-          <option value="Stochastic">Stochastic</option>
-          <option value="Williams_R">Williams %R</option>
-          <option value="ATR">ATR</option>
-          <option value="Volume">Volume</option>
-          <option value="Close">Price</option>
-        </select>
+        <div className="condition-indicator">
+          <select 
+            className="form-select indicator-select"
+            value={condition.indicator}
+            onChange={(e) => updateCondition(condition.id, 'indicator', e.target.value as IndicatorType)}
+          >
+            <option value="RSI">RSI</option>
+            <option value="MACD">MACD</option>
+            <option value="SMA">SMA</option>
+            <option value="EMA">EMA</option>
+            <option value="Bollinger_Bands">Bollinger Bands</option>
+            <option value="Stochastic">Stochastic</option>
+            <option value="Williams_R">Williams %R</option>
+            <option value="ATR">ATR</option>
+            <option value="Volume">Volume</option>
+            <option value="Close">Price</option>
+          </select>
+        </div>
         
-        <select 
-          className="form-select operator-select"
-          value={condition.operator}
-          onChange={(e) => updateCondition(condition.id, 'operator', e.target.value as OperatorType)}
-        >
-          <option value="less_than">{'<'}</option>
-          <option value="greater_than">{'>'}</option>
-          <option value="equals">{'='}</option>
-          <option value="not_equals">{'≠'}</option>
-          <option value="crosses_above">Crosses Above</option>
-          <option value="crosses_below">Crosses Below</option>
-          <option value="between">Between</option>
-          <option value="outside">Outside</option>
-        </select>
+        <div className="condition-operator">
+          <select 
+            className="form-select operator-select"
+            value={condition.operator}
+            onChange={(e) => updateCondition(condition.id, 'operator', e.target.value as OperatorType)}
+          >
+            <option value="less_than">{'<'}</option>
+            <option value="greater_than">{'>'}</option>
+            <option value="equals">{'='}</option>
+            <option value="not_equals">{'≠'}</option>
+            <option value="crosses_above">Crosses Above</option>
+            <option value="crosses_below">Crosses Below</option>
+            <option value="between">Between</option>
+            <option value="outside">Outside</option>
+          </select>
+        </div>
         
-        {renderValueInput()}
+        <div className="condition-value">
+          {renderValueInput()}
+        </div>
       </div>
       
       {hasParams && renderParameterInputs()}
@@ -212,8 +215,12 @@ const ConditionRow: React.FC<ConditionRowProps> = ({ condition }) => {
         <button 
           onClick={() => removeCondition(condition.id)} 
           className="remove-button"
+          title="Remove condition"
         >
-          ×
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
         </button>
       </div>
     </div>

@@ -17,16 +17,11 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get current ticker info (commented out as it's not currently used)
-  // const currentTicker = tickerOptions.find(t => t.symbol === value);
-
-  // Filter tickers based on search and category
-  const filteredTickers = selectedCategory === 'All' 
-    ? searchTickers(searchQuery)
-    : searchTickers(searchQuery).filter(ticker => ticker.category === selectedCategory);
+  // Filter tickers based on search
+  const filteredTickers = searchTickers(searchQuery);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -55,6 +50,19 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
     setIsOpen(true);
   };
 
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Stocks':
+        return '📈';
+      case 'Forex':
+        return '💱';
+      case 'Crypto':
+        return '₿';
+      default:
+        return '📊';
+    }
+  };
+
   return (
     <div className="ticker-selector" ref={dropdownRef}>
       <div className="ticker-input-container">
@@ -77,62 +85,61 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
 
       {isOpen && (
         <div className="ticker-dropdown">
-          {/* Category Filter */}
-          <div className="category-filter">
-            <select 
-              value={selectedCategory} 
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="category-select"
-            >
-              <option value="All">All Categories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </div>
 
           {/* Search Results */}
-          <div className="ticker-results">
-            {filteredTickers.length === 0 ? (
-              <div className="no-results">
-                No tickers found for "{searchQuery}"
-              </div>
-            ) : (
-              filteredTickers.map(ticker => (
-                <div
-                  key={ticker.symbol}
-                  className={`ticker-option ${value === ticker.symbol ? 'selected' : ''}`}
-                  onClick={() => handleTickerSelect(ticker)}
-                >
-                  <div className="ticker-symbol">{ticker.symbol}</div>
-                  <div className="ticker-info">
-                    <div className="ticker-name">{ticker.name}</div>
-                    <div className="ticker-category">{ticker.category}</div>
-                  </div>
+          {searchQuery && (
+            <div className="ticker-results">
+              <div className="results-header">Search Results</div>
+              {filteredTickers.length === 0 ? (
+                <div className="no-results">
+                  No tickers found for "{searchQuery}"
                 </div>
-              ))
-            )}
-          </div>
+              ) : (
+                filteredTickers.map(ticker => (
+                  <div
+                    key={ticker.symbol}
+                    className={`ticker-option ${value === ticker.symbol ? 'selected' : ''}`}
+                    onClick={() => handleTickerSelect(ticker)}
+                  >
+                    <div className="ticker-symbol">{ticker.symbol}</div>
+                    <div className="ticker-info">
+                      <div className="ticker-name">{ticker.name}</div>
+                      <div className="ticker-details">
+                        <span className="ticker-category">{getCategoryIcon(ticker.category)} {ticker.category}</span>
+                        <span className="ticker-price">{ticker.currentPrice}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
 
-          {/* Popular Tickers */}
-          {!searchQuery && selectedCategory === 'All' && (
-            <div className="popular-tickers">
-              <div className="popular-header">Popular Tickers</div>
-              <div className="popular-grid">
-                {['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'SPY', 'QQQ', 'BTCUSD'].map(symbol => {
-                  const ticker = tickerOptions.find(t => t.symbol === symbol);
-                  if (!ticker) return null;
-                  return (
-                    <button
-                      key={symbol}
-                      className={`popular-ticker ${value === symbol ? 'selected' : ''}`}
-                      onClick={() => handleTickerSelect(ticker)}
-                    >
-                      {symbol}
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Category-based Display */}
+          {!searchQuery && (
+            <div className="category-display">
+              {categories.map(category => {
+                const categoryTickers = tickerOptions.filter(t => t.category === category);
+                return (
+                  <div key={category} className="category-section">
+                    <div className="category-header">
+                      {getCategoryIcon(category)} {category}
+                    </div>
+                    <div className="category-tickers">
+                      {categoryTickers.map(ticker => (
+                        <button
+                          key={ticker.symbol}
+                          className={`category-ticker ${value === ticker.symbol ? 'selected' : ''}`}
+                          onClick={() => handleTickerSelect(ticker)}
+                        >
+                          <div className="ticker-symbol">{ticker.symbol}</div>
+                          <div className="ticker-price">{ticker.currentPrice}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

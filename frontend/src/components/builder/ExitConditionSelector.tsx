@@ -1,7 +1,7 @@
 // frontend/src/components/builder/ExitConditionSelector.tsx
 import React, { useState } from 'react';
-import type { ExitCondition, ExitType, TimeUnit } from './types';
-import { EXIT_PRESETS } from './types';
+import type { ExitCondition, StopLossType, TakeProfitType, StopLossConfig, TakeProfitConfig } from './types';
+import { STOP_LOSS_PRESETS, TAKE_PROFIT_PRESETS } from './types';
 import './ExitConditionSelector.css';
 
 interface ExitConditionSelectorProps {
@@ -14,38 +14,91 @@ const ExitConditionSelector: React.FC<ExitConditionSelectorProps> = ({
   onExitConditionChange
 }) => {
   const [showCustom, setShowCustom] = useState(false);
+  const [activeTab, setActiveTab] = useState<'stopLoss' | 'takeProfit'>('stopLoss');
 
-  const handlePresetSelect = (preset: any) => {
-    onExitConditionChange({
-      type: preset.type,
-      value: preset.value,
-      timePeriod: preset.timePeriod,
-      timeUnit: preset.timeUnit,
-      indicator: preset.indicator,
-      operator: preset.operator,
-      indicatorValue: preset.indicatorValue
-    });
-    setShowCustom(false);
+  // Ensure stopLoss and takeProfit exist with default values
+  const ensureDefaultConfig = () => {
+    if (!exitCondition.stopLoss) {
+      onExitConditionChange({
+        ...exitCondition,
+        stopLoss: {
+          type: 'fixed_percentage',
+          value: 5
+        }
+      });
+    }
+    if (!exitCondition.takeProfit) {
+      onExitConditionChange({
+        ...exitCondition,
+        takeProfit: {
+          type: 'risk_reward_ratio',
+          value: 2,
+          riskRewardRatio: 2
+        }
+      });
+    }
   };
 
-  const handleCustomChange = (field: keyof ExitCondition, value: any) => {
+  const handleStopLossPresetSelect = (preset: any) => {
     onExitConditionChange({
       ...exitCondition,
-      [field]: value
+      stopLoss: {
+        type: preset.type,
+        value: preset.value,
+        trailingActivation: preset.type.includes('trailing') ? 5 : undefined,
+        atrPeriod: preset.type === 'atr_based' ? 14 : undefined
+      }
     });
   };
 
-  const renderCustomFields = () => {
-    switch (exitCondition.type) {
-      case 'profit_target':
-      case 'trailing_stop':
+  const handleTakeProfitPresetSelect = (preset: any) => {
+    onExitConditionChange({
+      ...exitCondition,
+      takeProfit: {
+        type: preset.type,
+        value: preset.value,
+        riskRewardRatio: preset.type === 'risk_reward_ratio' ? preset.value : undefined,
+        indicator: preset.indicator,
+        indicatorValue: preset.indicator ? preset.value.toString() : undefined
+      }
+    });
+  };
+
+  const handleStopLossChange = (field: keyof StopLossConfig, value: any) => {
+    const currentStopLoss = exitCondition.stopLoss || { type: 'fixed_percentage', value: 5 };
+    onExitConditionChange({
+      ...exitCondition,
+      stopLoss: {
+        ...currentStopLoss,
+        [field]: value
+      }
+    });
+  };
+
+  const handleTakeProfitChange = (field: keyof TakeProfitConfig, value: any) => {
+    const currentTakeProfit = exitCondition.takeProfit || { type: 'risk_reward_ratio', value: 2, riskRewardRatio: 2 };
+    onExitConditionChange({
+      ...exitCondition,
+      takeProfit: {
+        ...currentTakeProfit,
+        [field]: value
+      }
+    });
+  };
+
+  const renderStopLossFields = () => {
+    const stopLoss = exitCondition.stopLoss;
+    if (!stopLoss) return null;
+
+    switch (stopLoss.type) {
+      case 'fixed_percentage':
         return (
           <div className="custom-field">
-            <label>Percentage:</label>
+            <label>Stop Loss Percentage:</label>
             <input
               type="number"
-              value={exitCondition.value || ''}
-              onChange={(e) => handleCustomChange('value', parseFloat(e.target.value))}
+              value={stopLoss.value || ''}
+              onChange={(e) => handleStopLossChange('value', parseFloat(e.target.value))}
               min="0.1"
               max="50"
               step="0.1"
@@ -55,35 +108,185 @@ const ExitConditionSelector: React.FC<ExitConditionSelectorProps> = ({
           </div>
         );
 
-      case 'time_based':
+      case 'fixed_dollar':
         return (
-          <div className="custom-time-fields">
+          <div className="custom-field">
+            <label>Stop Loss Amount:</label>
+            <input
+              type="number"
+              value={stopLoss.value || ''}
+              onChange={(e) => handleStopLossChange('value', parseFloat(e.target.value))}
+              min="0.01"
+              step="0.01"
+              placeholder="100.00"
+            />
+            <span>$</span>
+          </div>
+        );
+
+      case 'trailing_percentage':
+        return (
+          <div className="custom-fields">
             <div className="custom-field">
-              <label>Hold Period:</label>
+              <label>Trailing Percentage:</label>
               <input
                 type="number"
-                value={exitCondition.timePeriod || ''}
-                onChange={(e) => handleCustomChange('timePeriod', parseInt(e.target.value))}
-                min="1"
-                max={exitCondition.timeUnit === 'minutes' ? 1440 : exitCondition.timeUnit === 'hours' ? 8760 : 365}
-                placeholder={exitCondition.timeUnit === 'minutes' ? '60' : exitCondition.timeUnit === 'hours' ? '24' : '7'}
+                value={stopLoss.value || ''}
+                onChange={(e) => handleStopLossChange('value', parseFloat(e.target.value))}
+                min="0.1"
+                max="50"
+                step="0.1"
+                placeholder="5.0"
               />
-              <span className="time-unit-hint">
-                {exitCondition.timeUnit === 'minutes' ? 'max 1440 (24h)' : 
-                 exitCondition.timeUnit === 'hours' ? 'max 8760 (365d)' : 
-                 'max 365 days'}
-              </span>
+              <span>%</span>
             </div>
             <div className="custom-field">
-              <label>Time Unit:</label>
+              <label>Activation Profit:</label>
+              <input
+                type="number"
+                value={stopLoss.trailingActivation || ''}
+                onChange={(e) => handleStopLossChange('trailingActivation', parseFloat(e.target.value))}
+                min="0.1"
+                max="50"
+                step="0.1"
+                placeholder="5.0"
+              />
+              <span>%</span>
+            </div>
+          </div>
+        );
+
+      case 'atr_based':
+        return (
+          <div className="custom-fields">
+            <div className="custom-field">
+              <label>ATR Multiplier:</label>
+              <input
+                type="number"
+                value={stopLoss.value || ''}
+                onChange={(e) => handleStopLossChange('value', parseFloat(e.target.value))}
+                min="0.5"
+                max="10"
+                step="0.1"
+                placeholder="2.0"
+              />
+              <span>x ATR</span>
+            </div>
+            <div className="custom-field">
+              <label>ATR Period:</label>
+              <input
+                type="number"
+                value={stopLoss.atrPeriod || ''}
+                onChange={(e) => handleStopLossChange('atrPeriod', parseInt(e.target.value))}
+                min="5"
+                max="100"
+                step="1"
+                placeholder="14"
+              />
+              <span>days</span>
+            </div>
+          </div>
+        );
+
+      case 'support_resistance':
+        return (
+          <div className="custom-field">
+            <label>Price Level:</label>
+            <input
+              type="number"
+              value={stopLoss.supportResistanceLevel || ''}
+              onChange={(e) => handleStopLossChange('supportResistanceLevel', parseFloat(e.target.value))}
+              min="0.01"
+              step="0.01"
+              placeholder="100.00"
+            />
+            <span>$</span>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const renderTakeProfitFields = () => {
+    const takeProfit = exitCondition.takeProfit;
+    if (!takeProfit) return null;
+
+    switch (takeProfit.type) {
+      case 'fixed_percentage':
+        return (
+          <div className="custom-field">
+            <label>Profit Target Percentage:</label>
+            <input
+              type="number"
+              value={takeProfit.value || ''}
+              onChange={(e) => handleTakeProfitChange('value', parseFloat(e.target.value))}
+              min="0.1"
+              max="100"
+              step="0.1"
+              placeholder="10.0"
+            />
+            <span>%</span>
+          </div>
+        );
+
+      case 'fixed_dollar':
+        return (
+          <div className="custom-field">
+            <label>Profit Target Amount:</label>
+            <input
+              type="number"
+              value={takeProfit.value || ''}
+              onChange={(e) => handleTakeProfitChange('value', parseFloat(e.target.value))}
+              min="0.01"
+              step="0.01"
+              placeholder="200.00"
+            />
+            <span>$</span>
+          </div>
+        );
+
+      case 'risk_reward_ratio':
+        return (
+          <div className="custom-field">
+            <label>Risk:Reward Ratio:</label>
+            <input
+              type="number"
+              value={takeProfit.riskRewardRatio || ''}
+              onChange={(e) => handleTakeProfitChange('riskRewardRatio', parseFloat(e.target.value))}
+              min="0.5"
+              max="10"
+              step="0.1"
+              placeholder="2.0"
+            />
+            <span>1:</span>
+          </div>
+        );
+
+      case 'indicator_based':
+        return (
+          <div className="custom-fields">
+            <div className="custom-field">
+              <label>Indicator:</label>
               <select
-                value={exitCondition.timeUnit || 'days'}
-                onChange={(e) => handleCustomChange('timeUnit', e.target.value as TimeUnit)}
+                value={takeProfit.indicator || 'RSI'}
+                onChange={(e) => handleTakeProfitChange('indicator', e.target.value)}
               >
-                <option value="minutes">Minutes</option>
-                <option value="hours">Hours</option>
-                <option value="days">Days</option>
+                <option value="RSI">RSI</option>
+                <option value="Stochastic">Stochastic</option>
+                <option value="Williams_R">Williams %R</option>
+                <option value="MACD">MACD</option>
               </select>
+            </div>
+            <div className="custom-field">
+              <label>Exit Value:</label>
+              <input
+                type="number"
+                value={takeProfit.indicatorValue || ''}
+                onChange={(e) => handleTakeProfitChange('indicatorValue', e.target.value)}
+                placeholder="70"
+              />
             </div>
           </div>
         );
@@ -93,69 +296,198 @@ const ExitConditionSelector: React.FC<ExitConditionSelectorProps> = ({
     }
   };
 
+  const getExitDescription = () => {
+    let description = '';
+    
+    if (exitCondition.stopLoss) {
+      const sl = exitCondition.stopLoss;
+      switch (sl.type) {
+        case 'fixed_percentage':
+          description += `${sl.value}% Stop Loss`;
+          break;
+        case 'fixed_dollar':
+          description += `$${sl.value} Stop Loss`;
+          break;
+        case 'trailing_percentage':
+          description += `${sl.value}% Trailing Stop (activates at ${sl.trailingActivation}% profit)`;
+          break;
+        case 'atr_based':
+          description += `${sl.value}x ATR Stop (${sl.atrPeriod} day period)`;
+          break;
+        case 'support_resistance':
+          description += `Stop at $${sl.supportResistanceLevel}`;
+          break;
+      }
+    }
+
+    if (exitCondition.takeProfit) {
+      if (description) description += ' + ';
+      const tp = exitCondition.takeProfit;
+      switch (tp.type) {
+        case 'fixed_percentage':
+          description += `${tp.value}% Profit Target`;
+          break;
+        case 'fixed_dollar':
+          description += `$${tp.value} Profit Target`;
+          break;
+        case 'risk_reward_ratio':
+          description += `1:${tp.riskRewardRatio} Risk:Reward`;
+          break;
+        case 'indicator_based':
+          description += `${tp.indicator} > ${tp.indicatorValue} Exit`;
+          break;
+      }
+    }
+
+    return description || 'No exit conditions configured';
+  };
+
+  // Ensure default config when component mounts
+  React.useEffect(() => {
+    ensureDefaultConfig();
+  }, []);
+
   return (
     <div className="exit-condition-selector">
-      <h4>Exit Strategy</h4>
+      <h4>Risk Management</h4>
       <p className="exit-description">
-        Choose how to exit your position. Select a preset or customize your exit conditions.
+        Define stop loss and take profit levels to manage your risk and lock in profits.
       </p>
 
-      {/* Preset Buttons */}
-      <div className="exit-presets">
-        {EXIT_PRESETS.map((preset, index) => (
-          <button
-            key={index}
-            className={`preset-button ${exitCondition.type === preset.type && 
-              (preset.type === 'manual' || 
-               (preset.type === 'profit_target' && exitCondition.value === preset.value) ||
-               (preset.type === 'trailing_stop' && exitCondition.value === preset.value) ||
-               (preset.type === 'time_based' && exitCondition.timePeriod === preset.timePeriod && exitCondition.timeUnit === preset.timeUnit)) ? 'selected' : ''}`}
-            onClick={() => handlePresetSelect(preset)}
-          >
-            <div className="preset-label">{preset.label}</div>
-            <div className="preset-description">{preset.description}</div>
-          </button>
-        ))}
-      </div>
-
-      {/* Custom Configuration */}
-      <div className="custom-exit-section">
+      {/* Stop Loss and Take Profit Tabs */}
+      <div className="exit-tabs">
         <button
-          className="custom-toggle-button"
-          onClick={() => setShowCustom(!showCustom)}
+          className={`exit-tab ${activeTab === 'stopLoss' ? 'active' : ''}`}
+          onClick={() => setActiveTab('stopLoss')}
         >
-          {showCustom ? 'Hide' : 'Show'} Custom Configuration
+          Stop Loss
         </button>
-
-        {showCustom && (
-          <div className="custom-exit-config">
-            <div className="custom-field">
-              <label>Exit Type:</label>
-              <select
-                value={exitCondition.type}
-                onChange={(e) => handleCustomChange('type', e.target.value as ExitType)}
-              >
-                <option value="manual">Manual Exit</option>
-                <option value="profit_target">Profit Target</option>
-                <option value="trailing_stop">Trailing Stop</option>
-                <option value="time_based">Time Based</option>
-              </select>
-            </div>
-
-            {renderCustomFields()}
-          </div>
-        )}
+        <button
+          className={`exit-tab ${activeTab === 'takeProfit' ? 'active' : ''}`}
+          onClick={() => setActiveTab('takeProfit')}
+        >
+          Take Profit
+        </button>
       </div>
+
+      {/* Stop Loss Section */}
+      {activeTab === 'stopLoss' && (
+        <div className="exit-section">
+          <h5>Stop Loss Options</h5>
+          <div className="exit-presets">
+            {STOP_LOSS_PRESETS.map((preset, index) => (
+              <button
+                key={index}
+                className={`preset-button ${exitCondition.stopLoss?.type === preset.type && 
+                  exitCondition.stopLoss?.value === preset.value ? 'selected' : ''}`}
+                onClick={() => handleStopLossPresetSelect(preset)}
+              >
+                <div className="preset-label">{preset.label}</div>
+                <div className="preset-description">{preset.description}</div>
+              </button>
+            ))}
+          </div>
+
+          <div className="custom-exit-section">
+            <button
+              className="custom-toggle-button"
+              onClick={() => setShowCustom(!showCustom)}
+            >
+              {showCustom ? 'Hide' : 'Show'} Custom Stop Loss
+            </button>
+
+            {showCustom && (
+              <div className="custom-exit-config">
+                <div className="custom-field">
+                  <label>Stop Loss Type:</label>
+                  <select
+                    value={exitCondition.stopLoss?.type || 'fixed_percentage'}
+                    onChange={(e) => {
+                      if (!exitCondition.stopLoss) {
+                        onExitConditionChange({
+                          ...exitCondition,
+                          stopLoss: { type: e.target.value as StopLossType, value: 5 }
+                        });
+                      } else {
+                        handleStopLossChange('type', e.target.value as StopLossType);
+                      }
+                    }}
+                  >
+                    <option value="fixed_percentage">Fixed Percentage</option>
+                    <option value="fixed_dollar">Fixed Dollar Amount</option>
+                    <option value="trailing_percentage">Trailing Percentage</option>
+                    <option value="atr_based">ATR-Based</option>
+                    <option value="support_resistance">Support/Resistance Level</option>
+                  </select>
+                </div>
+
+                {renderStopLossFields()}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Take Profit Section */}
+      {activeTab === 'takeProfit' && (
+        <div className="exit-section">
+          <h5>Take Profit Options</h5>
+          <div className="exit-presets">
+            {TAKE_PROFIT_PRESETS.map((preset, index) => (
+              <button
+                key={index}
+                className={`preset-button ${exitCondition.takeProfit?.type === preset.type && 
+                  exitCondition.takeProfit?.value === preset.value ? 'selected' : ''}`}
+                onClick={() => handleTakeProfitPresetSelect(preset)}
+              >
+                <div className="preset-label">{preset.label}</div>
+                <div className="preset-description">{preset.description}</div>
+              </button>
+            ))}
+          </div>
+
+          <div className="custom-exit-section">
+            <button
+              className="custom-toggle-button"
+              onClick={() => setShowCustom(!showCustom)}
+            >
+              {showCustom ? 'Hide' : 'Show'} Custom Take Profit
+            </button>
+
+            {showCustom && (
+              <div className="custom-exit-config">
+                <div className="custom-field">
+                  <label>Take Profit Type:</label>
+                  <select
+                    value={exitCondition.takeProfit?.type || 'fixed_percentage'}
+                    onChange={(e) => {
+                      if (!exitCondition.takeProfit) {
+                        onExitConditionChange({
+                          ...exitCondition,
+                          takeProfit: { type: e.target.value as TakeProfitType, value: 10 }
+                        });
+                      } else {
+                        handleTakeProfitChange('type', e.target.value as TakeProfitType);
+                      }
+                    }}
+                  >
+                    <option value="fixed_percentage">Fixed Percentage</option>
+                    <option value="fixed_dollar">Fixed Dollar Amount</option>
+                    <option value="risk_reward_ratio">Risk:Reward Ratio</option>
+                    <option value="indicator_based">Indicator-Based</option>
+                  </select>
+                </div>
+
+                {renderTakeProfitFields()}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Current Selection Display */}
       <div className="current-exit-display">
-        <strong>Current Exit:</strong> {
-          exitCondition.type === 'manual' ? 'Manual Exit' :
-          exitCondition.type === 'profit_target' ? `${exitCondition.value}% Profit Target` :
-          exitCondition.type === 'trailing_stop' ? `${exitCondition.value}% Trailing Stop` :
-          exitCondition.type === 'time_based' ? `${exitCondition.timePeriod} ${exitCondition.timeUnit || 'days'} Hold` :
-          'Manual Exit'
-        }
+        <strong>Current Risk Management:</strong> {getExitDescription()}
       </div>
     </div>
   );

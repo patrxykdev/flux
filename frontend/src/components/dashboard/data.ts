@@ -8,10 +8,11 @@ export const statCardsData = [
   },
   {
     title: "Today's P&L",
-    value: "+$1,560.45",
+    value: "$1,560.45",
     change: "+1.25%",
     changeType: "positive" as const,
     icon: "trend",
+    isPnL: true,
   },
   {
     title: "Active Strategies",

@@ -130,8 +130,23 @@ def add_indicators_to_data(df: pd.DataFrame) -> pd.DataFrame:
             df_copy["High"], df_copy["Low"], close_prices
         )
 
-        # Calculate ATR
+        # Calculate ATR with multiple periods for enhanced backtesting
         df_copy["atr"] = calculate_atr(df_copy["High"], df_copy["Low"], close_prices)
+        
+        # Calculate additional ATR periods commonly used in trading
+        df_copy["atr_5"] = calculate_atr(df_copy["High"], df_copy["Low"], close_prices, 5)
+        df_copy["atr_10"] = calculate_atr(df_copy["High"], df_copy["Low"], close_prices, 10)
+        df_copy["atr_14"] = calculate_atr(df_copy["High"], df_copy["Low"], close_prices, 14)
+        df_copy["atr_20"] = calculate_atr(df_copy["High"], df_copy["Low"], close_prices, 20)
+        df_copy["atr_50"] = calculate_atr(df_copy["High"], df_copy["Low"], close_prices, 50)
+        
+        # Calculate volume-based indicators if volume data is available
+        if "Volume" in df_copy.columns:
+            # Volume moving average
+            df_copy["volume_sma"] = calculate_sma(df_copy["Volume"], 20)
+            
+            # Volume RSI (relative volume strength)
+            df_copy["volume_rsi"] = calculate_rsi(df_copy["Volume"], 14)
 
     # Fill NaN values with forward fill, then backward fill for any remaining NaNs
     df_copy.ffill(inplace=True)

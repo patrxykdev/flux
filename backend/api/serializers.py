@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Strategy 
+from .models import Strategy, Backtest
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -21,4 +21,10 @@ class StrategySerializer(serializers.ModelSerializer):
     class Meta:
         model = Strategy
         fields = ['id', 'name', 'configuration', 'created_at', 'updated_at']
+        read_only_fields = ['user']
+
+class BacktestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Backtest
+        fields = ['id', 'strategy_name', 'ticker', 'start_date', 'end_date', 'timeframe', 'initial_cash', 'leverage', 'results', 'created_at']
         read_only_fields = ['user']

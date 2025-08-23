@@ -21,6 +21,15 @@
   --white: #ffffff;
   --error-red: #dc2626;
   --success-green: #059669;
+  
+  /* Additional variables for enhanced design */
+  --background: #f8fafc;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.1);
+  --shadow-blue: 0 8px 25px rgba(13, 110, 253, 0.15);
+  --shadow-green: 0 8px 25px rgba(16, 185, 129, 0.3);
+  --shadow-red: 0 8px 25px rgba(239, 68, 68, 0.3);
+  --shadow-yellow: 0 8px 25px rgba(251, 191, 36, 0.3);
 }
 
 a {

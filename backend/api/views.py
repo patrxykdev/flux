@@ -14,8 +14,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics
 
 from django.contrib.auth.models import User
-from .models import Strategy
-from .serializers import UserSerializer, StrategySerializer
+from .models import Strategy, Backtest
+from .serializers import UserSerializer, StrategySerializer, BacktestSerializer
 from .backtester import run_backtest
 
 def fetch_data_from_polygon(ticker, start_date, end_date, timeframe):
@@ -463,8 +463,34 @@ class BacktestView(APIView):
                 else:
                     print(results)
                 
-                # Add data range information to the response
-                results['data_range_info'] = data_range_message
+
+                
+                # Save backtest results to database
+                try:
+                    # Delete oldest backtests if user has more than 10
+                    user_backtests = Backtest.objects.filter(user=request.user)
+                    if user_backtests.count() >= 10:
+                        oldest_backtest = user_backtests.order_by('created_at').first()
+                        if oldest_backtest:
+                            oldest_backtest.delete()
+                    
+                    # Create new backtest record
+                    backtest = Backtest.objects.create(
+                        user=request.user,
+                        strategy_name=strategy.name,
+                        ticker=ticker.upper(),
+                        start_date=start_date,
+                        end_date=end_date,
+                        timeframe=timeframe,
+                        initial_cash=cash,
+                        leverage=leverage,
+                        results=results
+                    )
+                    print(f"Backtest saved with ID: {backtest.id}")
+                except Exception as save_error:
+                    print(f"Warning: Could not save backtest to database: {save_error}")
+                    # Don't fail the request if saving fails
+                
                 return Response(results, status=status.HTTP_200_OK)
                 
             except Exception as e:
@@ -474,43 +500,16 @@ class BacktestView(APIView):
             return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class DateRangeView(APIView):
+class RecentBacktestsView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        """Get available date range for a ticker"""
+        """Get the last 10 backtests for the authenticated user"""
         try:
-            ticker = request.query_params.get('ticker', '').strip().upper()
-            timeframe = request.query_params.get('timeframe', '1d')
-            
-            if not ticker:
-                return Response({"error": "Ticker symbol is required."}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Try to get a sample of data to determine available range
-            # Use a wide date range to see what's actually available
-            sample_start = '2020-01-01'
-            sample_end = datetime.now().strftime('%Y-%m-%d')
-            
-            try:
-                data, data_range_info = fetch_market_data(ticker, sample_start, sample_end, timeframe)
-                
-                return Response({
-                    'ticker': ticker,
-                    'timeframe': timeframe,
-                    'available_start': data_range_info['actual_start'],
-                    'available_end': data_range_info['actual_end'],
-                    'data_points': data_range_info['data_points'],
-                    'data_source': data_range_info['source'],
-                    'message': f"Historical data available for {ticker} from {data_range_info['actual_start']} to {data_range_info['actual_end']} ({data_range_info['data_points']} data points)"
-                })
-                
-            except Exception as e:
-                return Response({
-                    'ticker': ticker,
-                    'timeframe': timeframe,
-                    'error': str(e),
-                    'message': f"Could not determine available date range for {ticker}. Please check the ticker symbol."
-                }, status=status.HTTP_400_BAD_REQUEST)
-                
+            backtests = Backtest.objects.filter(user=request.user)[:10]
+            serializer = BacktestSerializer(backtests, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({"error": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Error fetching backtests: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+

@@ -53,29 +53,25 @@
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  max-height: 400px;
+  max-height: 500px;
   overflow-y: auto;
   margin-top: 2px;
 }
 
-.category-filter {
-  padding: 12px;
-  border-bottom: 1px solid #f1f3f4;
-  background-color: #f8f9fa;
-}
 
-.category-select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  background-color: white;
-}
 
 .ticker-results {
   max-height: 200px;
   overflow-y: auto;
+}
+
+.results-header {
+  padding: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #495057;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #f1f3f4;
 }
 
 .ticker-option {
@@ -111,7 +107,13 @@
 .ticker-name {
   font-size: 0.9rem;
   color: #495057;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+}
+
+.ticker-details {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .ticker-category {
@@ -123,6 +125,12 @@
   display: inline-block;
 }
 
+.ticker-price {
+  font-size: 0.8rem;
+  color: #28a745;
+  font-weight: 500;
+}
+
 .no-results {
   padding: 20px;
   text-align: center;
@@ -130,59 +138,98 @@
   font-style: italic;
 }
 
-.popular-tickers {
-  border-top: 1px solid #f1f3f4;
+/* Category-based Display */
+.category-display {
   padding: 12px;
-  background-color: #f8f9fa;
 }
 
-.popular-header {
+.category-section {
+  margin-bottom: 20px;
+}
+
+.category-section:last-child {
+  margin-bottom: 0;
+}
+
+.category-header {
   font-size: 0.9rem;
   font-weight: 600;
   color: #495057;
   margin-bottom: 8px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid var(--primary-blue, #0d6efd);
 }
 
-.popular-grid {
+.category-tickers {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
 }
 
-.popular-ticker {
-  padding: 6px 8px;
+.category-ticker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
   border: 1px solid #dee2e6;
-  border-radius: 4px;
+  border-radius: 6px;
   background-color: white;
-  font-size: 0.8rem;
-  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
+  min-height: 60px;
+  justify-content: center;
 }
 
-.popular-ticker:hover {
+.category-ticker:hover {
   background-color: #f8f9fa;
   border-color: var(--primary-blue, #0d6efd);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.popular-ticker.selected {
+.category-ticker.selected {
   background-color: var(--primary-blue, #0d6efd);
   color: white;
   border-color: var(--primary-blue, #0d6efd);
 }
 
+.category-ticker.selected .ticker-price {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.category-ticker .ticker-symbol {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  margin-right: 0;
+  min-width: auto;
+}
+
+.category-ticker .ticker-price {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .ticker-dropdown {
-    max-height: 300px;
+    max-height: 400px;
   }
   
   .ticker-results {
     max-height: 150px;
   }
   
-  .popular-grid {
-    grid-template-columns: repeat(4, 1fr);
+  .category-tickers {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .ticker-details {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
   }
 } 

@@ -39,6 +39,24 @@ def validate_strategy_config(config: dict) -> None:
     if config['action'] not in ['LONG', 'SHORT']:
         raise ValueError(f"Invalid action: {config['action']}. Must be 'LONG' or 'SHORT'")
     
+    # Validate entry condition (position sizing)
+    if 'entryCondition' not in config:
+        raise ValueError("Strategy configuration must contain 'entryCondition'")
+    
+    entry_condition = config['entryCondition']
+    if not isinstance(entry_condition, dict):
+        raise ValueError("Entry condition must be a dictionary")
+    
+    if 'positionSizing' not in entry_condition:
+        raise ValueError("Entry condition must have a 'positionSizing' field")
+    
+    valid_position_sizing_types = ['fixed_percentage', 'fixed_dollar', 'kelly_criterion', 'risk_based', 'volatility_based']
+    if entry_condition['positionSizing'] not in valid_position_sizing_types:
+        raise ValueError(f"Invalid position sizing type: {entry_condition['positionSizing']}")
+    
+    if 'sizingValue' not in entry_condition or not isinstance(entry_condition['sizingValue'], (int, float)):
+        raise ValueError("Entry condition must have a numeric 'sizingValue' field")
+    
     # Validate exit condition
     if 'exitCondition' not in config:
         raise ValueError("Strategy configuration must contain 'exitCondition'")
@@ -47,53 +65,252 @@ def validate_strategy_config(config: dict) -> None:
     if not isinstance(exit_condition, dict):
         raise ValueError("Exit condition must be a dictionary")
     
-    if 'type' not in exit_condition:
-        raise ValueError("Exit condition must have a 'type' field")
-    
-    valid_exit_types = ['manual', 'profit_target', 'stop_loss', 'trailing_stop', 'time_based', 'indicator_based']
-    if exit_condition['type'] not in valid_exit_types:
-        raise ValueError(f"Invalid exit condition type: {exit_condition['type']}")
-    
-    # Validate exit condition parameters based on type
-    exit_type = exit_condition['type']
-    if exit_type in ['profit_target', 'stop_loss', 'trailing_stop']:
-        if 'value' not in exit_condition or not isinstance(exit_condition['value'], (int, float)):
-            raise ValueError(f"{exit_type} exit condition must have a numeric 'value' field")
-        if exit_condition['value'] <= 0 or exit_condition['value'] > 100:
-            raise ValueError(f"{exit_type} percentage must be between 0 and 100")
-    
-    elif exit_type == 'time_based':
-        if 'timePeriod' not in exit_condition or not isinstance(exit_condition['timePeriod'], int):
-            raise ValueError("Time-based exit condition must have an integer 'timePeriod' field")
-        if 'timeUnit' not in exit_condition:
-            raise ValueError("Time-based exit condition must have a 'timeUnit' field")
-        if exit_condition['timeUnit'] not in ['minutes', 'hours', 'days']:
-            raise ValueError("Time unit must be 'minutes', 'hours', or 'days'")
+    # Validate stop loss configuration
+    if 'stopLoss' in exit_condition:
+        stop_loss = exit_condition['stopLoss']
+        if not isinstance(stop_loss, dict):
+            raise ValueError("Stop loss must be a dictionary")
         
-        time_period = exit_condition['timePeriod']
-        time_unit = exit_condition['timeUnit']
+        if 'type' not in stop_loss:
+            raise ValueError("Stop loss must have a 'type' field")
         
-        if time_unit == 'minutes':
-            if time_period <= 0 or time_period > 1440:  # Max 24 hours in minutes
-                raise ValueError("Minutes must be between 1 and 1440")
-        elif time_unit == 'hours':
-            if time_period <= 0 or time_period > 8760:  # Max 365 days in hours
-                raise ValueError("Hours must be between 1 and 8760")
-        elif time_unit == 'days':
-            if time_period <= 0 or time_period > 365:
-                raise ValueError("Days must be between 1 and 365")
+        valid_stop_loss_types = ['fixed_percentage', 'fixed_dollar', 'trailing_percentage', 'trailing_dollar', 'atr_based', 'support_resistance']
+        if stop_loss['type'] not in valid_stop_loss_types:
+            raise ValueError(f"Invalid stop loss type: {stop_loss['type']}")
+        
+        if 'value' not in stop_loss or not isinstance(stop_loss['value'], (int, float)):
+            raise ValueError("Stop loss must have a numeric 'value' field")
     
-    elif exit_type == 'indicator_based':
-        required_fields = ['indicator', 'operator', 'indicatorValue']
-        for field in required_fields:
-            if field not in exit_condition:
-                raise ValueError(f"Indicator-based exit condition missing required field: {field}")
+    # Validate take profit configuration
+    if 'takeProfit' in exit_condition:
+        take_profit = exit_condition['takeProfit']
+        if not isinstance(take_profit, dict):
+            raise ValueError("Take profit must be a dictionary")
         
-        if exit_condition['indicator'] not in ['RSI', 'MACD', 'Close', 'SMA', 'EMA', 'Bollinger_Bands', 'Stochastic', 'Williams_R', 'ATR', 'Volume']:
-            raise ValueError(f"Invalid indicator in exit condition: {exit_condition['indicator']}")
+        if 'type' not in take_profit:
+            raise ValueError("Take profit must have a 'type' field")
         
-        if exit_condition['operator'] not in ['less_than', 'greater_than', 'equals']:
-            raise ValueError(f"Invalid operator in exit condition: {exit_condition['operator']}")
+        valid_take_profit_types = ['fixed_percentage', 'fixed_dollar', 'risk_reward_ratio', 'indicator_based']
+        if take_profit['type'] not in valid_take_profit_types:
+            raise ValueError(f"Invalid take profit type: {take_profit['type']}")
+        
+        if 'value' not in take_profit or not isinstance(take_profit['value'], (int, float)):
+            raise ValueError("Take profit must have a numeric 'value' field")
+
+def calculate_position_size(entry_condition: dict, current_portfolio_value: float, current_price: float, atr_value: float = None) -> float:
+    """Calculate position size based on entry conditions."""
+    sizing_type = entry_condition.get('positionSizing', 'fixed_percentage')
+    sizing_value = entry_condition.get('sizingValue', 2)
+    
+    if sizing_type == 'fixed_percentage':
+        # Use fixed percentage of portfolio
+        position_value = current_portfolio_value * (sizing_value / 100)
+        max_position = entry_condition.get('maxPositionSize', 10)
+        max_position_value = current_portfolio_value * (max_position / 100)
+        return min(position_value, max_position_value)
+    
+    elif sizing_type == 'fixed_dollar':
+        # Use fixed dollar amount
+        position_value = sizing_value
+        max_position = entry_condition.get('maxPositionSize', 10)
+        max_position_value = current_portfolio_value * (max_position / 100)
+        return min(position_value, max_position_value)
+    
+    elif sizing_type == 'risk_based':
+        # Risk-based sizing (1-2% risk per trade)
+        risk_per_trade = entry_condition.get('riskPerTrade', 1)
+        position_value = current_portfolio_value * (risk_per_trade / 100)
+        max_position = entry_condition.get('maxPositionSize', 10)
+        max_position_value = current_portfolio_value * (max_position / 100)
+        return min(position_value, max_position_value)
+    
+    elif sizing_type == 'kelly_criterion':
+        # Kelly Criterion sizing (simplified implementation)
+        # In a real implementation, this would use win rate and odds
+        kelly_fraction = 0.25  # Conservative Kelly fraction
+        position_value = current_portfolio_value * kelly_fraction
+        max_position = entry_condition.get('maxPositionSize', 10)
+        max_position_value = current_portfolio_value * (max_position / 100)
+        return min(position_value, max_position_value)
+    
+    elif sizing_type == 'volatility_based':
+        # Volatility-adjusted sizing
+        if atr_value is None:
+            atr_value = current_price * 0.02  # Default to 2% of price
+        
+        volatility_period = entry_condition.get('volatilityPeriod', 20)
+        volatility_factor = 1.0 / (atr_value / current_price)  # Inverse of volatility
+        
+        position_value = current_portfolio_value * (sizing_value / 100) * volatility_factor
+        max_position = entry_condition.get('maxPositionSize', 10)
+        max_position_value = current_portfolio_value * (max_position / 100)
+        return min(position_value, max_position_value)
+    
+    else:
+        # Default to 2% of portfolio
+        return current_portfolio_value * 0.02
+
+def should_exit_position_enhanced(exit_condition: dict, position_type: str, entry_price: float, 
+                                current_price: float, current_date, entry_date, highest_price: float, 
+                                lowest_price: float, df: pd.DataFrame, current_index: int) -> tuple[bool, str]:
+    """Enhanced exit condition checker that handles stop loss and take profit separately."""
+    should_exit = False
+    exit_reason = ""
+    
+    # Check stop loss conditions
+    if 'stopLoss' in exit_condition:
+        stop_loss = exit_condition['stopLoss']
+        stop_loss_type = stop_loss.get('type', 'fixed_percentage')
+        stop_loss_value = stop_loss.get('value', 5)
+        
+        if stop_loss_type == 'fixed_percentage':
+            if position_type == 'LONG':
+                loss_pct = ((entry_price - current_price) / entry_price) * 100
+            else:  # SHORT
+                loss_pct = ((current_price - entry_price) / entry_price) * 100
+            
+            if loss_pct >= stop_loss_value:
+                should_exit = True
+                exit_reason = f"Stop Loss: {stop_loss_value}%"
+        
+        elif stop_loss_type == 'fixed_dollar':
+            if position_type == 'LONG':
+                loss_amount = entry_price - current_price
+            else:  # SHORT
+                loss_amount = current_price - entry_price
+            
+            if loss_amount >= stop_loss_value:
+                should_exit = True
+                exit_reason = f"Stop Loss: ${stop_loss_value}"
+        
+        elif stop_loss_type == 'trailing_percentage':
+            if position_type == 'LONG':
+                if current_price > highest_price:
+                    highest_price = current_price
+                
+                drop_pct = ((highest_price - current_price) / highest_price) * 100
+                if drop_pct >= stop_loss_value:
+                    should_exit = True
+                    exit_reason = f"Trailing Stop: {stop_loss_value}%"
+            else:  # SHORT
+                if current_price < lowest_price:
+                    lowest_price = current_price
+                
+                rise_pct = ((current_price - lowest_price) / lowest_price) * 100
+                if rise_pct >= stop_loss_value:
+                    should_exit = True
+                    exit_reason = f"Trailing Stop: {stop_loss_value}%"
+        
+        elif stop_loss_type == 'atr_based':
+            atr_period = stop_loss.get('atrPeriod', 14)
+            atr_col = f'atr_{atr_period}'
+            
+            if atr_col in df.columns:
+                atr_value = df[atr_col].iloc[current_index]
+                if not pd.isna(atr_value):
+                    if position_type == 'LONG':
+                        stop_price = entry_price - (atr_value * stop_loss_value)
+                        if current_price <= stop_price:
+                            should_exit = True
+                            exit_reason = f"ATR Stop: {stop_loss_value}x ATR"
+                    else:  # SHORT
+                        stop_price = entry_price + (atr_value * stop_loss_value)
+                        if current_price >= stop_price:
+                            should_exit = True
+                            exit_reason = f"ATR Stop: {stop_loss_value}x ATR"
+        
+        elif stop_loss_type == 'support_resistance':
+            support_level = stop_loss.get('supportResistanceLevel', 0)
+            if position_type == 'LONG' and current_price <= support_level:
+                should_exit = True
+                exit_reason = f"Support Level: ${support_level}"
+            elif position_type == 'SHORT' and current_price >= support_level:
+                should_exit = True
+                exit_reason = f"Resistance Level: ${support_level}"
+    
+    # Check take profit conditions
+    if 'takeProfit' in exit_condition:
+        take_profit = exit_condition['takeProfit']
+        take_profit_type = take_profit.get('type', 'fixed_percentage')
+        take_profit_value = take_profit.get('value', 10)
+        
+        if take_profit_type == 'fixed_percentage':
+            if position_type == 'LONG':
+                profit_pct = ((current_price - entry_price) / entry_price) * 100
+            else:  # SHORT
+                profit_pct = ((entry_price - current_price) / entry_price) * 100
+            
+            if profit_pct >= take_profit_value:
+                should_exit = True
+                exit_reason = f"Take Profit: {take_profit_value}%"
+        
+        elif take_profit_type == 'fixed_dollar':
+            if position_type == 'LONG':
+                profit_amount = current_price - entry_price
+            else:  # SHORT
+                profit_amount = entry_price - current_price
+            
+            if profit_amount >= take_profit_value:
+                should_exit = True
+                exit_reason = f"Take Profit: ${take_profit_value}"
+        
+        elif take_profit_type == 'risk_reward_ratio':
+            risk_reward_ratio = take_profit.get('riskRewardRatio', 2)
+            
+            # Calculate the risk amount (entry price to stop loss)
+            if 'stopLoss' in exit_condition:
+                stop_loss = exit_condition['stopLoss']
+                if stop_loss.get('type') == 'fixed_percentage':
+                    stop_loss_pct = stop_loss.get('value', 5)
+                    if position_type == 'LONG':
+                        risk_amount = entry_price * (stop_loss_pct / 100)
+                    else:  # SHORT
+                        risk_amount = entry_price * (stop_loss_pct / 100)
+                    
+                    # Calculate take profit target
+                    target_profit = risk_amount * risk_reward_ratio
+                    if position_type == 'LONG':
+                        target_price = entry_price + target_profit
+                        if current_price >= target_price:
+                            should_exit = True
+                            exit_reason = f"Risk:Reward {risk_reward_ratio}:1"
+                    else:  # SHORT
+                        target_price = entry_price - target_profit
+                        if current_price <= target_price:
+                            should_exit = True
+                            exit_reason = f"Risk:Reward {risk_reward_ratio}:1"
+        
+        elif take_profit_type == 'indicator_based':
+            indicator = take_profit.get('indicator', 'RSI')
+            indicator_value = take_profit.get('indicatorValue', '70')
+            
+            # Map indicator names to column names
+            indicator_mapping = {
+                'RSI': 'rsi',
+                'MACD': 'macd_line',
+                'SMA': 'sma_20',
+                'EMA': 'ema_20',
+                'Bollinger_Bands': 'bb_middle',
+                'Stochastic': 'stoch_k',
+                'Williams_R': 'williams_r',
+                'ATR': 'atr',
+                'Volume': 'Volume',
+                'Close': 'Close'
+            }
+            
+            indicator_col = indicator_mapping.get(indicator, 'Close')
+            if indicator_col in df.columns:
+                current_indicator_value = df[indicator_col].iloc[current_index]
+                if not pd.isna(current_indicator_value):
+                    try:
+                        target_value = float(indicator_value)
+                        if current_indicator_value > target_value:
+                            should_exit = True
+                            exit_reason = f"{indicator} > {indicator_value}"
+                    except (ValueError, TypeError):
+                        pass
+    
+    return should_exit, exit_reason
 
 def run_backtest(data_df: pd.DataFrame, strategy_config: dict, initial_cash: float, leverage: float = 1.0):
     """Main backtesting function with comprehensive error handling."""
@@ -120,8 +337,9 @@ def run_backtest(data_df: pd.DataFrame, strategy_config: dict, initial_cash: flo
         signals = generate_signals(df_with_indicators, strategy_config)
         
         # 3. Simulate Portfolio: Loop through prices and signals to simulate trades.
-        exit_condition = strategy_config.get('exitCondition', {'type': 'manual'})
-        simulator = PortfolioSimulator(df_with_indicators, signals, initial_cash, leverage, exit_condition)
+        exit_condition = strategy_config.get('exitCondition', {'stopLoss': {'type': 'fixed_percentage', 'value': 5}, 'takeProfit': {'type': 'risk_reward_ratio', 'value': 2, 'riskRewardRatio': 2}})
+        entry_condition = strategy_config.get('entryCondition', {'positionSizing': 'fixed_percentage', 'sizingValue': 2})
+        simulator = PortfolioSimulator(df_with_indicators, signals, initial_cash, leverage, exit_condition, entry_condition)
         results = simulator.run_simulation()
         
         return results
@@ -304,12 +522,14 @@ def generate_signals(df: pd.DataFrame, config: dict) -> pd.Series:
 
 class PortfolioSimulator:
     """Simulates trades based on a signal Series and returns the results."""
-    def __init__(self, df: pd.DataFrame, signals: pd.Series, initial_cash: float, leverage: float = 1.0, exit_condition: dict = None):
+    def __init__(self, df: pd.DataFrame, signals: pd.Series, initial_cash: float, leverage: float = 1.0, 
+                 exit_condition: dict = None, entry_condition: dict = None):
         self.df = df
         self.signals = signals
         self.initial_cash = initial_cash
         self.leverage = max(1.0, min(10.0, leverage))  # Clamp leverage between 1x and 10x
-        self.exit_condition = exit_condition if exit_condition is not None else {'type': 'manual'}
+        self.exit_condition = exit_condition if exit_condition is not None else {'stopLoss': {'type': 'fixed_percentage', 'value': 5}, 'takeProfit': {'type': 'risk_reward_ratio', 'value': 2, 'riskRewardRatio': 2}}
+        self.entry_condition = entry_condition if entry_condition is not None else {'positionSizing': 'fixed_percentage', 'sizingValue': 2}
         self.cash = initial_cash
         self.position = 0.0  # Positive for long, negative for short
         self.trades = []
@@ -320,113 +540,21 @@ class PortfolioSimulator:
         self.entry_date = None  # Track when we entered for time-based exits
         self.highest_price = 0  # Track highest price for trailing stops (for long positions)
         self.lowest_price = float('inf')  # Track lowest price for trailing stops (for short positions)
+        self.entry_portfolio_value = 0  # Track portfolio value at entry
 
     def should_exit_position(self, current_price: float, current_date, current_index: int) -> bool:
-        """Check if we should exit the position based on exit conditions."""
+        """Check if we should exit the position based on stop loss and take profit conditions."""
         if not self.in_position or self.position == 0:
             return False
         
-        exit_type = self.exit_condition.get('type', 'manual')
+        # Use the enhanced exit condition checker
+        should_exit, exit_reason = should_exit_position_enhanced(
+            self.exit_condition, self.position_type, self.entry_price, 
+            current_price, current_date, self.entry_date, self.highest_price, 
+            self.lowest_price, self.df, current_index
+        )
         
-        if exit_type == 'manual':
-            # Manual exit: only exit when signal changes from current position type
-            current_signal = self.signals.iloc[current_index]
-            return current_signal != self.position_type
-        
-        elif exit_type == 'profit_target':
-            # Exit when profit target is reached
-            if self.entry_price is not None:
-                if self.position_type == 'LONG':
-                    profit_pct = ((current_price - self.entry_price) / self.entry_price) * 100
-                else:  # SHORT
-                    profit_pct = ((self.entry_price - current_price) / self.entry_price) * 100
-                target_value = float(self.exit_condition.get('value', 5))
-                return profit_pct >= target_value
-        
-        elif exit_type == 'stop_loss':
-            # Exit when stop loss is hit
-            if self.entry_price is not None:
-                if self.position_type == 'LONG':
-                    loss_pct = ((self.entry_price - current_price) / self.entry_price) * 100
-                else:  # SHORT
-                    loss_pct = ((current_price - self.entry_price) / self.entry_price) * 100
-                target_value = float(self.exit_condition.get('value', 2))
-                return loss_pct >= target_value
-        
-        elif exit_type == 'trailing_stop':
-            if self.position_type == 'LONG':
-                # Update highest price if current price is higher
-                if current_price > self.highest_price:
-                    self.highest_price = current_price
-                
-                # Exit if price has dropped by trailing stop percentage from highest
-                if self.highest_price > 0:
-                    drop_pct = ((self.highest_price - current_price) / self.highest_price) * 100
-                    target_value = float(self.exit_condition.get('value', 3))
-                    return drop_pct >= target_value
-            else:  # SHORT
-                # Update lowest price if current price is lower
-                if current_price < self.lowest_price:
-                    self.lowest_price = current_price
-                
-                # Exit if price has risen by trailing stop percentage from lowest
-                if self.lowest_price < float('inf'):
-                    rise_pct = ((current_price - self.lowest_price) / self.lowest_price) * 100
-                    target_value = float(self.exit_condition.get('value', 3))
-                    return rise_pct >= target_value
-        
-        elif exit_type == 'time_based':
-            # Exit after holding for specified time period
-            if self.entry_date is not None:
-                time_period = self.exit_condition.get('timePeriod', 7)
-                time_unit = self.exit_condition.get('timeUnit', 'days')
-                
-                if time_unit == 'minutes':
-                    # Convert to minutes for comparison
-                    time_diff = current_date - self.entry_date
-                    minutes_held = time_diff.total_seconds() / 60
-                    return minutes_held >= time_period
-                elif time_unit == 'hours':
-                    # Convert to hours for comparison
-                    time_diff = current_date - self.entry_date
-                    hours_held = time_diff.total_seconds() / 3600
-                    return hours_held >= time_period
-                else:  # days
-                    days_held = (current_date - self.entry_date).days
-                    return days_held >= time_period
-        
-        elif exit_type == 'indicator_based':
-            # Exit based on indicator condition
-            indicator = self.exit_condition.get('indicator', 'RSI')
-            operator = self.exit_condition.get('operator', 'greater_than')
-            target_value = float(self.exit_condition.get('indicatorValue', '70'))
-            
-            # Map indicator names to column names
-            indicator_mapping = {
-                'RSI': 'rsi',
-                'MACD': 'macd_line',
-                'SMA': 'sma_20',
-                'EMA': 'ema_20',
-                'Bollinger_Bands': 'bb_middle',
-                'Stochastic': 'stoch_k',
-                'Williams_R': 'williams_r',
-                'ATR': 'atr',
-                'Volume': 'Volume',
-                'Close': 'Close'
-            }
-            
-            indicator_col = indicator_mapping.get(indicator, 'Close')
-            if indicator_col in self.df.columns:
-                current_indicator_value = self.df[indicator_col].iloc[current_index]
-                if not pd.isna(current_indicator_value):
-                    if operator == 'greater_than':
-                        return current_indicator_value > target_value
-                    elif operator == 'less_than':
-                        return current_indicator_value < target_value
-                    elif operator == 'equals':
-                        return abs(current_indicator_value - target_value) < 0.01
-        
-        return False
+        return should_exit
 
     def run_simulation(self):
         """Run the portfolio simulation with proper buy/sell cycles."""
@@ -444,18 +572,31 @@ class PortfolioSimulator:
                 # Trading logic: LONG/SHORT when signal matches and we're not in position
                 # Exit when exit conditions are met
                 if signal in ['LONG', 'SHORT'] and not self.in_position and self.cash > 0 and self.equity_curve and self.equity_curve[-1] > 0:
-                    # Enter position: use current portfolio value with leverage
-                    current_portfolio_value = self.cash  # Current available cash
-                    available_capital = current_portfolio_value * self.leverage
+                    # Calculate position size based on entry conditions
+                    current_portfolio_value = self.cash
+                    
+                    # Get ATR value for volatility-based sizing if needed
+                    atr_value = None
+                    if self.entry_condition.get('positionSizing') == 'volatility_based':
+                        atr_period = self.entry_condition.get('volatilityPeriod', 20)
+                        atr_col = f'atr_{atr_period}'
+                        if atr_col in self.df.columns:
+                            atr_value = self.df[atr_col].iloc[i]
+                    
+                    # Calculate position size
+                    position_value = calculate_position_size(self.entry_condition, current_portfolio_value, current_price, atr_value)
+                    
+                    # Apply leverage
+                    leveraged_position_value = position_value * self.leverage
                     
                     if signal == 'LONG':
                         # Long position: buy shares
-                        self.position = available_capital / current_price
+                        self.position = leveraged_position_value / current_price
                         trade_type = 'LONG'
                         trade_description = f"LONG: {current_date.strftime('%Y-%m-%d')} at ${current_price:.2f}"
                     else:  # SHORT
                         # Short position: sell shares (negative position)
-                        self.position = -(available_capital / current_price)
+                        self.position = -(leveraged_position_value / current_price)
                         trade_type = 'SHORT'
                         trade_description = f"SHORT: {current_date.strftime('%Y-%m-%d')} at ${current_price:.2f}"
                     
@@ -471,8 +612,8 @@ class PortfolioSimulator:
                         max_price_rise = current_price * (max_loss_pct / 100)
                         max_safe_price = current_price + max_price_rise
                     
-                    trade_value = available_capital  # Total value of the leveraged position
-                    self.cash = 0  # All cash is used as margin
+                    trade_value = leveraged_position_value  # Total value of the leveraged position
+                    self.cash = current_portfolio_value - position_value  # Use cash for margin
                     self.in_position = True
                     self.position_type = signal
                     self.entry_price = current_price  # Store entry price for P&L calculation
@@ -494,9 +635,10 @@ class PortfolioSimulator:
                         'Price': f"{current_price:.2f}", 
                         'Portfolio': f"${portfolio_value:,.2f}",
                         'P&L': '—',  # No P&L for entry trades
-                        'Leverage': f"{self.leverage}x"
+                        'Leverage': f"{self.leverage}x",
+                        'Position Size': f"${position_value:,.2f}"
                     })
-                    print(f"{trade_description}, Value: ${trade_value:,.2f}, Leverage: {self.leverage}x")
+                    print(f"{trade_description}, Value: ${trade_value:,.2f}, Leverage: {self.leverage}x, Position Size: ${position_value:,.2f}")
                         
                 elif self.in_position and self.position != 0 and self.should_exit_position(current_price, current_date, i):
                     # Exit position: close all position
@@ -554,7 +696,8 @@ class PortfolioSimulator:
                         'Price': f"{current_price:.2f}", 
                         'Portfolio': f"${portfolio_value:,.2f}",
                         'P&L': pnl_display,
-                        'Leverage': f"{self.leverage}x"
+                        'Leverage': f"{self.leverage}x",
+                        'Position Size': '—'
                     })
                     print(f"{trade_description}, P&L: {pnl_display}, Leverage: {self.leverage}x")
                 
@@ -616,7 +759,8 @@ class PortfolioSimulator:
                             'Price': f"{current_price:.2f}", 
                             'Portfolio': "$0.00",  # Margin call results in zero portfolio value
                             'P&L': pnl_display,
-                            'Leverage': f"{self.leverage}x"
+                            'Leverage': f"{self.leverage}x",
+                            'Position Size': '—'
                         })
                         print(f"MARGIN CALL: {trade_type} at ${current_price:.2f}, P&L: {pnl_display}")
                     

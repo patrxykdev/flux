@@ -2,18 +2,20 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import api from '../../api';
-import type { Condition, StrategyConfiguration, IndicatorType, ExitCondition } from './types';
+import type { Condition, StrategyConfiguration, IndicatorType, ExitCondition, EntryCondition } from './types';
 
 interface BuilderState {
   conditions: Condition[];
   logicalOperator: 'AND' | 'OR';
   action: 'LONG' | 'SHORT';
+  entryCondition: EntryCondition;
   exitCondition: ExitCondition;
   savedStrategies: Array<{ id: number; name: string }>;
   
   // Actions
   setLogicalOperator: (operator: 'AND' | 'OR') => void;
   setAction: (action: 'LONG' | 'SHORT') => void;
+  setEntryCondition: (entryCondition: EntryCondition) => void;
   setExitCondition: (exitCondition: ExitCondition) => void;
   addCondition: () => void;
   updateCondition: (id: string, field: keyof Condition, value: any) => void;
@@ -35,8 +37,22 @@ const initialState = {
   }],
   logicalOperator: 'AND' as const,
   action: 'LONG' as const,
+  entryCondition: {
+    positionSizing: 'fixed_percentage' as const,
+    sizingValue: 2,
+    maxPositionSize: 10
+  },
   exitCondition: {
-    type: 'manual' as const
+    type: 'manual' as const,
+    stopLoss: {
+      type: 'fixed_percentage' as const,
+      value: 5
+    },
+    takeProfit: {
+      type: 'risk_reward_ratio' as const,
+      value: 2,
+      riskRewardRatio: 2
+    }
   },
 };
 
@@ -46,6 +62,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   setLogicalOperator: (operator) => set({ logicalOperator: operator }),
   setAction: (action) => set({ action: action }),
+  setEntryCondition: (entryCondition) => set({ entryCondition }),
   setExitCondition: (exitCondition) => set({ exitCondition }),
   
   addCondition: () => {
@@ -76,7 +93,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   resetBuilder: () => set(initialState),
   
   saveStrategy: async (name) => {
-    const { conditions, logicalOperator, action, fetchSavedStrategies } = get();
+    const { conditions, logicalOperator, action, entryCondition, exitCondition, fetchSavedStrategies } = get();
     const trimmedName = name.trim();
     if (!trimmedName || conditions.length === 0) { 
       throw new Error('Please provide a name and add at least one condition.'); 
@@ -84,7 +101,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     if (get().savedStrategies.some(s => s.name.toLowerCase() === trimmedName.toLowerCase())) { 
       throw new Error(`A strategy named "${trimmedName}" already exists.`); 
     }
-    const strategyConfiguration: StrategyConfiguration = { conditions, logicalOperator, action, exitCondition: get().exitCondition };
+    const strategyConfiguration: StrategyConfiguration = { 
+      conditions, 
+      logicalOperator, 
+      action, 
+      entryCondition,
+      exitCondition 
+    };
     const response = await api.post('/api/strategies/', { name: trimmedName, configuration: strategyConfiguration });
     fetchSavedStrategies();
     return response;
@@ -109,7 +132,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         conditions: strategy.configuration.conditions || [],
         logicalOperator: strategy.configuration.logicalOperator || 'AND',
         action: strategy.configuration.action || 'LONG',
-        exitCondition: strategy.configuration.exitCondition || { type: 'manual' }
+        entryCondition: strategy.configuration.entryCondition || initialState.entryCondition,
+        exitCondition: strategy.configuration.exitCondition || initialState.exitCondition
       });
       
       return strategy;
