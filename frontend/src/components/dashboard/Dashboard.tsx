@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api'; 
 import StatCard from './StatCard';
 import PortfolioPerformanceCard from './PortfolioPerformanceCard';
@@ -7,6 +8,7 @@ import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
   const [username, setUsername] = useState<string>('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/api/profile/')
@@ -17,7 +19,7 @@ const Dashboard: React.FC = () => {
         if (error.response?.status === 401) {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
-          window.location.href = '/';
+          navigate('/', { replace: true });
         }
       });
   }, []);

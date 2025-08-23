@@ -1,5 +1,6 @@
 // frontend/src/api.ts
 import axios from 'axios';
+import { navigateToHome } from './utils/navigation';
 
 // Automatically detect environment and set appropriate API URL
 const getApiUrl = () => {
@@ -81,7 +82,7 @@ api.interceptors.response.use(
         // No refresh token, redirect to login
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/';
+        navigateToHome();
         return Promise.reject(error);
       }
 
@@ -105,7 +106,7 @@ api.interceptors.response.use(
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         processQueue(refreshError, null);
-        window.location.href = '/';
+        navigateToHome();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

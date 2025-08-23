@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import './DashboardLayout.css';
 
@@ -8,6 +8,7 @@ const DashboardLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/api/profile/')
@@ -18,7 +19,7 @@ const DashboardLayout: React.FC = () => {
         if (error.response?.status === 401) {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
-          window.location.href = '/';
+          navigate('/', { replace: true });
         }
       });
   }, []);
@@ -26,7 +27,8 @@ const DashboardLayout: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
-    window.location.reload();
+    // Use React Router navigation instead of window.location to avoid routing issues
+    navigate('/', { replace: true });
   };
 
   const navigationItems = [

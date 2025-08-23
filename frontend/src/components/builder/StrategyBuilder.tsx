@@ -1,6 +1,6 @@
 // frontend/src/components/builder/StrategyBuilder.tsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useBuilderStore } from './builderStore';
 import ConditionRow from './ConditionRow';
 import EntryConditionSelector from './EntryConditionSelector';
@@ -13,6 +13,7 @@ const StrategyBuilder: React.FC = () => {
   const [strategyName, setStrategyName] = useState('');
   const [selectedStrategyId, setSelectedStrategyId] = useState<number | ''>('');
   const [activeSection, setActiveSection] = useState<'conditions' | 'action' | 'entry' | 'exit'>('conditions');
+  const navigate = useNavigate();
   const {
     conditions, logicalOperator, action, entryCondition, exitCondition,
     setLogicalOperator, setAction, setEntryCondition, setExitCondition, addCondition,
@@ -50,7 +51,7 @@ const StrategyBuilder: React.FC = () => {
       if (error.response?.status === 401) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/';
+        navigate('/', { replace: true });
       }
     });
     return () => {
