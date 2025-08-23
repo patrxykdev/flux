@@ -9,15 +9,19 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key-for-development-only')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG =  True
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "https://flux-r8q4.onrender.com"]
+# Fix ALLOWED_HOSTS - only hostnames, not full URLs
+ALLOWED_HOSTS = [
+    "localhost", 
+    "127.0.0.1", 
+    "flux-r8q4.onrender.com",  # Remove https://
+    "fluxtrader.xyz"  # Add your frontend domain
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -155,10 +159,27 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=7),
 }
 
-# This assumes your React app will run on http://localhost:5173 (Vite's default) or 3000
+# Fix CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "https://fluxtrader.xyz",  # Your frontend domain
+]
+
+# Add CORS_ALLOW_CREDENTIALS for authentication
+CORS_ALLOW_CREDENTIALS = True
+
+# Add CORS_ALLOWED_HEADERS for JWT tokens
+CORS_ALLOWED_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL')

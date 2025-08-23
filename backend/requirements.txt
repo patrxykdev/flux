@@ -28,6 +28,14 @@ typing_extensions==4.14.1
 # Production Server
 gunicorn==23.0.0
 
+# Add these for better compatibility
+setuptools>=68.0.0
+wheel>=0.40.0
+
+# Update these specific versions for Python 3.12+ compatibility
+numpy>=1.26.0
+pandas>=2.1.0
+
 # Development and Testing (optional)
 # pytest==7.4.3
 # pytest-django==4.7.0
