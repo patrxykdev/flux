@@ -24,10 +24,5 @@
         }
       ]
     }
-  ],
-  "functions": {
-    "app/api/**/*.py": {
-      "runtime": "python3.9"
-    }
-  }
+  ]
 }
