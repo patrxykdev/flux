@@ -8,11 +8,12 @@ import './App.css';
 import BacktestPage from './components/backtester/BacktestPage';
 import type { JSX } from 'react';
 import { Toaster } from 'react-hot-toast';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // A helper component to protect routes that require a login
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const token = localStorage.getItem('accessToken');
-  if (!token) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
     // If no token, redirect to the login page
     return <Navigate to="/" replace />;
   }
@@ -41,16 +42,15 @@ const SettingsPage = () => (
   </div>
 );
 
-function App() {
-  const token = localStorage.getItem('accessToken');
+function AppContent() {
+  const { isAuthenticated } = useAuth();
 
   return (
-    <BrowserRouter>
-      <div className="main-app">
-        <Routes>
-          {/* If logged in, the root path '/' redirects to the dashboard */}
-          {/* If not logged in, the root path '/' shows the HomePage */}
-          <Route path="/" element={token ? <Navigate to="/dashboard" /> : <HomePage />} />
+    <div className="main-app">
+      <Routes>
+        {/* If logged in, the root path '/' redirects to the dashboard */}
+        {/* If not logged in, the root path '/' shows the HomePage */}
+        <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <HomePage />} />
           
           {/* Dashboard Layout Routes - All pages with sidebar except settings */}
           <Route 
@@ -130,6 +130,15 @@ function App() {
           }}
         />
       </div>
+    );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

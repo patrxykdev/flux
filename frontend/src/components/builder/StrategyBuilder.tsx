@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useBuilderStore } from './builderStore';
+import { useAuth } from '../../contexts/AuthContext';
 import ConditionRow from './ConditionRow';
 import EntryConditionSelector from './EntryConditionSelector';
 import ExitConditionSelector from './ExitConditionSelector';
@@ -14,6 +15,7 @@ const StrategyBuilder: React.FC = () => {
   const [selectedStrategyId, setSelectedStrategyId] = useState<number | ''>('');
   const [activeSection, setActiveSection] = useState<'conditions' | 'action' | 'entry' | 'exit'>('conditions');
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const {
     conditions, logicalOperator, action, entryCondition, exitCondition,
     setLogicalOperator, setAction, setEntryCondition, setExitCondition, addCondition,
@@ -49,8 +51,7 @@ const StrategyBuilder: React.FC = () => {
     fetchSavedStrategies().catch(error => {
       console.error("Failed to fetch strategies", error);
       if (error.response?.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        logout();
         navigate('/', { replace: true });
       }
     });

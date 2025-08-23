@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api'; 
+import { useAuth } from '../../contexts/AuthContext';
 import StatCard from './StatCard';
 import PortfolioPerformanceCard from './PortfolioPerformanceCard';
 import { statCardsData } from './data';
@@ -9,6 +10,7 @@ import './Dashboard.css';
 const Dashboard: React.FC = () => {
   const [username, setUsername] = useState<string>('');
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   useEffect(() => {
     api.get('/api/profile/')
@@ -17,8 +19,7 @@ const Dashboard: React.FC = () => {
         console.error("Failed to fetch profile", error);
         // If it's an authentication error, redirect to login
         if (error.response?.status === 401) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
+          logout();
           navigate('/', { replace: true });
         }
       });

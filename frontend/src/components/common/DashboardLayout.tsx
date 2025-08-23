@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import api from '../../api';
+import { useAuth } from '../../contexts/AuthContext';
 import './DashboardLayout.css';
 
 const DashboardLayout: React.FC = () => {
@@ -9,6 +10,7 @@ const DashboardLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   useEffect(() => {
     api.get('/api/profile/')
@@ -17,17 +19,14 @@ const DashboardLayout: React.FC = () => {
         console.error("Failed to fetch profile", error);
         // If it's an authentication error, redirect to login
         if (error.response?.status === 401) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
+          logout();
           navigate('/', { replace: true });
         }
       });
   }, []);
   
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    // Use React Router navigation instead of window.location to avoid routing issues
+    logout();
     navigate('/', { replace: true });
   };
 
