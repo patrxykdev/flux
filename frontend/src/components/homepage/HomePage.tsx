@@ -167,8 +167,8 @@ const HomePage: React.FC = () => {
       <section id="features" className="features-container">
         <div className="section-header">
           <h2>Why Choose Flux Trader?</h2>
-          <p>Built by traders, for traders. Experience the future of algorithmic trading.</p>
         </div>
+        <p className="section-subtitle">Built by traders, for traders. Experience the future of algorithmic trading.</p>
         
         {features.map((feature, index) => (
           <div 
@@ -191,8 +191,8 @@ const HomePage: React.FC = () => {
       <section id="about" className="about-section">
         <div className="section-header">
           <h2>About Flux Trader</h2>
-          <p>We're revolutionizing algorithmic trading by making it accessible to everyone</p>
         </div>
+        <p className="section-subtitle">We're revolutionizing algorithmic trading by making it accessible to everyone</p>
         
         <div className="about-content">
           <div className="about-text">
