@@ -107,7 +107,7 @@ const StrategyBuilderDemo: React.FC = () => {
               <strong>Stop Loss:</strong> 10% trailing stop (activates at 5% profit)
             </div>
             <div className="strategy-section">
-              <strong>Take Profit:</strong> RSI > 70 exit condition
+              <strong>Take Profit:</strong> RSI &gt; 70 exit condition
             </div>
           </div>
         </div>
