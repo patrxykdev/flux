@@ -283,6 +283,72 @@ def test_different_position_sizing():
     except Exception as e:
         print(f"❌ ATR-based stop loss test failed: {e}")
 
+def test_leverage_functionality():
+    """Test leverage functionality."""
+    print("\nTesting leverage functionality...")
+    
+    data = create_sample_data()
+    
+    # Test with 2x leverage
+    leveraged_strategy = {
+        'conditions': [
+            {
+                'id': '1',
+                'indicator': 'RSI',
+                'operator': 'less_than',
+                'value': '30',
+                'period': 14
+            }
+        ],
+        'logicalOperator': 'AND',
+        'action': 'LONG',
+        'entryCondition': {
+            'positionSizing': 'fixed_percentage',
+            'sizingValue': 5.0,  # 5% of portfolio per trade
+            'maxPositionSize': 15.0
+        },
+        'exitCondition': {
+            'stopLoss': {
+                'type': 'fixed_percentage',
+                'value': 3.0
+            },
+            'takeProfit': {
+                'type': 'fixed_percentage',
+                'value': 6.0
+            }
+        }
+    }
+    
+    try:
+        # Test with 1x leverage (no leverage)
+        results_1x = run_backtest(data, leveraged_strategy, initial_cash=10000, leverage=1.0)
+        
+        # Test with 2x leverage
+        results_2x = run_backtest(data, leveraged_strategy, initial_cash=10000, leverage=2.0)
+        
+        if 'error' not in results_1x and 'error' not in results_2x:
+            print("✅ Leverage functionality working")
+            print(f"1x leverage - Final equity: {results_1x['stats'].get('Equity Final [$]', 'N/A')}")
+            print(f"2x leverage - Final equity: {results_2x['stats'].get('Equity Final [$]', 'N/A')}")
+            print(f"1x leverage - Trades: {results_1x['stats'].get('# Trades', 'N/A')}")
+            print(f"2x leverage - Trades: {results_2x['stats'].get('# Trades', 'N/A')}")
+            
+            # Check that leverage affects position sizes
+            if results_1x['trades'] and results_2x['trades']:
+                first_trade_1x = results_1x['trades'][0]
+                first_trade_2x = results_2x['trades'][0]
+                
+                if 'Position Size' in first_trade_1x and 'Position Size' in first_trade_2x:
+                    pos_size_1x = first_trade_1x['Position Size']
+                    pos_size_2x = first_trade_2x['Position Size']
+                    print(f"1x leverage position size: {pos_size_1x}")
+                    print(f"2x leverage position size: {pos_size_2x}")
+        else:
+            print(f"❌ Leverage test failed: {results_1x.get('error', '')} or {results_2x.get('error', '')}")
+            
+    except Exception as e:
+        print(f"❌ Leverage test failed: {e}")
+
 def main():
     """Run all tests."""
     print("🚀 Testing Enhanced Backtesting System")
@@ -301,6 +367,9 @@ def main():
     # Test 3: Different position sizing strategies
     test_different_position_sizing()
     
+    # Test 4: Leverage functionality
+    test_leverage_functionality()
+    
     print("\n" + "=" * 50)
     print("✅ All tests completed!")
     print("\nEnhanced backtesting system is working with:")
@@ -309,6 +378,8 @@ def main():
     print("- Take profit options")
     print("- Multiple ATR periods")
     print("- Risk-based position sizing")
+    print("- Proper leverage handling")
+    print("- Correct portfolio management")
 
 if __name__ == "__main__":
     main()

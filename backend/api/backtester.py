@@ -314,7 +314,7 @@ def should_exit_position_enhanced(exit_condition: dict, position_type: str, entr
 
 def run_backtest(data_df: pd.DataFrame, strategy_config: dict, initial_cash: float, leverage: float = 1.0):
     """Main backtesting function with comprehensive error handling."""
-    from .indicators import add_indicators_to_data
+    from api.indicators import add_indicators_to_data
     
     # Validate inputs
     if data_df.empty:
@@ -540,7 +540,7 @@ class PortfolioSimulator:
         self.entry_date = None  # Track when we entered for time-based exits
         self.highest_price = 0  # Track highest price for trailing stops (for long positions)
         self.lowest_price = float('inf')  # Track lowest price for trailing stops (for short positions)
-        self.entry_portfolio_value = 0  # Track portfolio value at entry
+        self.position_value = 0  # Track the actual dollar value of the position
 
     def should_exit_position(self, current_price: float, current_date, current_index: int) -> bool:
         """Check if we should exit the position based on stop loss and take profit conditions."""
@@ -566,12 +566,24 @@ class PortfolioSimulator:
                 
                 # Skip if price is invalid
                 if pd.isna(current_price) or current_price <= 0:
-                    self.equity_curve.append(self.cash + (self.position * (self.df['Close'].iloc[i-1] if i > 0 else current_price)))
+                    # Calculate equity based on current position and cash
+                    if self.in_position and self.entry_price is not None:
+                        if self.position_type == 'LONG':
+                            price_change = current_price - self.entry_price
+                            pnl = price_change * abs(self.position)
+                            current_equity = self.cash + pnl
+                        else:  # SHORT
+                            price_change = self.entry_price - current_price
+                            pnl = price_change * abs(self.position)
+                            current_equity = self.cash + pnl
+                    else:
+                        current_equity = self.cash
+                    self.equity_curve.append(current_equity)
                     continue
 
                 # Trading logic: LONG/SHORT when signal matches and we're not in position
                 # Exit when exit conditions are met
-                if signal in ['LONG', 'SHORT'] and not self.in_position and self.cash > 0 and self.equity_curve and self.equity_curve[-1] > 0:
+                if signal in ['LONG', 'SHORT'] and not self.in_position and self.cash > 0:
                     # Calculate position size based on entry conditions
                     current_portfolio_value = self.cash
                     
@@ -586,39 +598,37 @@ class PortfolioSimulator:
                     # Calculate position size
                     position_value = calculate_position_size(self.entry_condition, current_portfolio_value, current_price, atr_value)
                     
-                    # Apply leverage
+                    # Apply leverage to position size (but keep cash management conservative)
                     leveraged_position_value = position_value * self.leverage
                     
+                    # Ensure we don't exceed available cash (use the leveraged amount for shares, but track cash properly)
+                    if leveraged_position_value > self.cash:
+                        leveraged_position_value = self.cash * 0.95  # Use 95% of available cash
+                        position_value = leveraged_position_value / self.leverage  # Adjust base position value
+                    
+                    # Calculate number of shares (using leveraged position value)
                     if signal == 'LONG':
                         # Long position: buy shares
-                        self.position = leveraged_position_value / current_price
+                        shares = leveraged_position_value / current_price
+                        self.position = shares
                         trade_type = 'LONG'
                         trade_description = f"LONG: {current_date.strftime('%Y-%m-%d')} at ${current_price:.2f}"
                     else:  # SHORT
                         # Short position: sell shares (negative position)
-                        self.position = -(leveraged_position_value / current_price)
+                        shares = leveraged_position_value / current_price
+                        self.position = -shares
                         trade_type = 'SHORT'
                         trade_description = f"SHORT: {current_date.strftime('%Y-%m-%d')} at ${current_price:.2f}"
                     
-                    # Check if this trade would result in negative equity
-                    # For leveraged positions, we need to ensure we can cover potential losses
-                    max_loss_pct = 100 / self.leverage  # Maximum loss percentage before margin call
-                    
-                    # Calculate the maximum price movement we can handle
-                    if signal == 'LONG':
-                        max_price_drop = current_price * (max_loss_pct / 100)
-                        min_safe_price = current_price - max_price_drop
-                    else:  # SHORT
-                        max_price_rise = current_price * (max_loss_pct / 100)
-                        max_safe_price = current_price + max_price_rise
-                    
-                    trade_value = leveraged_position_value  # Total value of the leveraged position
-                    self.cash = current_portfolio_value - position_value  # Use cash for margin
+                    # Update cash and position tracking
+                    # For leveraged positions, we only deduct the base position value from cash
+                    # The leverage allows us to control more shares with the same cash
+                    self.cash -= position_value  # Deduct base position value from cash
+                    self.position_value = leveraged_position_value  # Track the leveraged position value
                     self.in_position = True
                     self.position_type = signal
-                    self.entry_price = current_price  # Store entry price for P&L calculation
-                    self.entry_date = current_date  # Store entry date for time-based exits
-                    self.entry_portfolio_value = current_portfolio_value  # Store portfolio value at entry
+                    self.entry_price = current_price
+                    self.entry_date = current_date
                     
                     # Initialize trailing stops
                     if signal == 'LONG':
@@ -626,30 +636,27 @@ class PortfolioSimulator:
                     else:  # SHORT
                         self.lowest_price = current_price
                     
-                    # Calculate current portfolio value (actual equity, not leveraged position value)
-                    portfolio_value = current_portfolio_value  # Portfolio value is the current cash amount
-                    
                     self.trades.append({
                         'Date': current_date.strftime('%Y-%m-%d %H:%M'), 
                         'Type': trade_type, 
                         'Price': f"{current_price:.2f}", 
-                        'Portfolio': f"${portfolio_value:,.2f}",
+                        'Portfolio': f"${current_portfolio_value:,.2f}",
                         'P&L': '—',  # No P&L for entry trades
                         'Leverage': f"{self.leverage}x",
                         'Position Size': f"${position_value:,.2f}"
                     })
-                    print(f"{trade_description}, Value: ${trade_value:,.2f}, Leverage: {self.leverage}x, Position Size: ${position_value:,.2f}")
+                    print(f"{trade_description}, Value: ${position_value:,.2f}, Leverage: {self.leverage}x, Position Size: ${position_value:,.2f}")
                         
                 elif self.in_position and self.position != 0 and self.should_exit_position(current_price, current_date, i):
                     # Exit position: close all position
                     if self.position_type == 'LONG':
                         # Close long position: sell shares
-                        trade_value = self.position * current_price
+                        exit_value = self.position * current_price
                         trade_type = 'EXIT LONG'
                         trade_description = f"EXIT LONG: {current_date.strftime('%Y-%m-%d')} at ${current_price:.2f}"
                     else:  # SHORT
                         # Close short position: buy back shares
-                        trade_value = abs(self.position) * current_price
+                        exit_value = abs(self.position) * current_price
                         trade_type = 'EXIT SHORT'
                         trade_description = f"EXIT SHORT: {current_date.strftime('%Y-%m-%d')} at ${current_price:.2f}"
                     
@@ -664,59 +671,55 @@ class PortfolioSimulator:
                             price_change_pct = ((self.entry_price - current_price) / self.entry_price) * 100
                             pnl_amount = (self.entry_price - current_price) * abs(self.position)
                         
-                        pnl_pct = price_change_pct * self.leverage  # Leveraged percentage
-                        
                         # Format P&L display
                         if pnl_amount >= 0:
-                            pnl_display = f"+${pnl_amount:,.2f} (+{pnl_pct:.2f}%)"
+                            pnl_display = f"+${pnl_amount:,.2f} (+{price_change_pct:.2f}%)"
                         else:
-                            pnl_display = f"-${abs(pnl_amount):,.2f} ({pnl_pct:.2f}%)"
+                            pnl_display = f"-${abs(pnl_amount):,.2f} ({price_change_pct:.2f}%)"
                     else:
                         pnl_display = "N/A"
                     
-                    # Calculate profit/loss with leverage for portfolio
-                    # Use the actual portfolio value that was used for this trade
+                    # Update cash based on P&L
                     if self.position_type == 'LONG':
-                        profit_loss = trade_value - (self.entry_portfolio_value * self.leverage)
+                        # For long: we get the exit value back
+                        self.cash += exit_value
                     else:  # SHORT
-                        # For shorts, we get cash when we sell, then pay when we buy back
-                        profit_loss = (self.entry_portfolio_value * self.leverage) - trade_value
+                        # For short: we pay the exit value (buying back shares)
+                        # But we already have the cash from when we sold short
+                        # So the P&L is the difference between entry and exit
+                        self.cash += pnl_amount
                     
-                    self.cash = self.entry_portfolio_value + profit_loss  # Return to entry portfolio value + P&L
+                    # Reset position tracking
                     self.position = 0
+                    self.position_value = 0
                     self.in_position = False
                     self.position_type = None
-                    
-                    # Calculate final portfolio value after the trade (actual equity)
-                    portfolio_value = self.cash  # After exiting, portfolio is just cash
+                    self.entry_price = None
+                    self.entry_date = None
                     
                     self.trades.append({
                         'Date': current_date.strftime('%Y-%m-%d %H:%M'), 
                         'Type': trade_type, 
                         'Price': f"{current_price:.2f}", 
-                        'Portfolio': f"${portfolio_value:,.2f}",
+                        'Portfolio': f"${self.cash:,.2f}",
                         'P&L': pnl_display,
                         'Leverage': f"{self.leverage}x",
                         'Position Size': '—'
                     })
                     print(f"{trade_description}, P&L: {pnl_display}, Leverage: {self.leverage}x")
                 
-                # Calculate current equity (actual portfolio value, not leveraged position value)
-                if self.in_position:
-                    # When in position, calculate actual equity based on P&L
-                    if self.entry_price is not None:
-                        if self.position_type == 'LONG':
-                            # For long positions: entry portfolio value + (current price - entry price) * position size
-                            price_change = current_price - self.entry_price
-                            pnl = price_change * abs(self.position)
-                            current_equity = self.entry_portfolio_value + pnl
-                        else:  # SHORT
-                            # For short positions: entry portfolio value + (entry price - current price) * position size
-                            price_change = self.entry_price - current_price
-                            pnl = price_change * abs(self.position)
-                            current_equity = self.entry_portfolio_value + pnl
-                    else:
-                        current_equity = self.cash
+                # Calculate current equity (cash + unrealized P&L if in position)
+                if self.in_position and self.entry_price is not None:
+                    if self.position_type == 'LONG':
+                        # For long positions: cash + (current price - entry price) * shares
+                        price_change = current_price - self.entry_price
+                        unrealized_pnl = price_change * abs(self.position)
+                        current_equity = self.cash + unrealized_pnl
+                    else:  # SHORT
+                        # For short positions: cash + (entry price - current price) * shares
+                        price_change = self.entry_price - current_price
+                        unrealized_pnl = price_change * abs(self.position)
+                        current_equity = self.cash + unrealized_pnl
                 else:
                     # When not in position, equity is just the cash
                     current_equity = self.cash
@@ -727,10 +730,10 @@ class PortfolioSimulator:
                     if self.in_position and self.position != 0:
                         # Emergency exit - close position at current price
                         if self.position_type == 'LONG':
-                            trade_value = self.position * current_price
+                            exit_value = self.position * current_price
                             trade_type = 'MARGIN CALL LONG'
                         else:  # SHORT
-                            trade_value = abs(self.position) * current_price
+                            exit_value = abs(self.position) * current_price
                             trade_type = 'MARGIN CALL SHORT'
                         
                         # Calculate P&L for margin call
@@ -747,24 +750,32 @@ class PortfolioSimulator:
                         else:
                             pnl_display = "N/A"
                         
-                        # Reset to zero cash (margin call wiped out the account)
-                        self.cash = 0
+                        # Update cash based on exit
+                        if self.position_type == 'LONG':
+                            self.cash += exit_value
+                        else:  # SHORT
+                            self.cash += pnl_amount
+                        
+                        # Reset position
                         self.position = 0
+                        self.position_value = 0
                         self.in_position = False
                         self.position_type = None
+                        self.entry_price = None
+                        self.entry_date = None
                         
                         self.trades.append({
                             'Date': current_date.strftime('%Y-%m-%d %H:%M'), 
                             'Type': trade_type, 
                             'Price': f"{current_price:.2f}", 
-                            'Portfolio': "$0.00",  # Margin call results in zero portfolio value
+                            'Portfolio': f"${self.cash:,.2f}",
                             'P&L': pnl_display,
                             'Leverage': f"{self.leverage}x",
                             'Position Size': '—'
                         })
                         print(f"MARGIN CALL: {trade_type} at ${current_price:.2f}, P&L: {pnl_display}")
                     
-                    current_equity = 0  # Set equity to zero to prevent negative values
+                    current_equity = max(0, self.cash)  # Set equity to max of 0 or cash
                 
                 self.equity_curve.append(current_equity)
             
