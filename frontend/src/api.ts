@@ -1,7 +1,18 @@
 // frontend/src/api.ts
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000';
+// Automatically detect environment and set appropriate API URL
+const getApiUrl = () => {
+  // If we're in production (deployed to Vercel), use the Render backend
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    // Replace this with your actual Render backend URL
+    return 'https://flux-r8q4.onrender.com';
+  }
+  // Development environment
+  return 'http://localhost:8000';
+};
+
+const API_URL = getApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,
