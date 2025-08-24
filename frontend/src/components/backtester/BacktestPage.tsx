@@ -13,6 +13,16 @@ interface SavedStrategy { id: number; name: string; }
 interface BacktestResults { 
   stats: any; 
   plot_data: any; 
+  trades: Array<{
+    Date: string;
+    Type: string;
+    Price: string;
+    Portfolio: string;
+    'P&L': string;
+    Leverage: string;
+    'Position Size': string;
+    'Exit Reason': string;
+  }>;
 }
 
 const BacktestPage: React.FC = () => {
@@ -134,6 +144,37 @@ const BacktestPage: React.FC = () => {
           }
       }]
     };
+  };
+
+  const calculateWinRate = (trades: Array<{ Type: string; 'P&L': string }> | undefined) => {
+    if (!trades || trades.length === 0) return 0;
+
+    let winningTrades = 0;
+    let totalCompletedTrades = 0;
+
+    trades.forEach(trade => {
+      // Only count exit trades (completed trades)
+      if (trade.Type.includes('EXIT') || trade.Type.includes('MARGIN CALL')) {
+        totalCompletedTrades++;
+        
+        // Check if P&L is positive (winning trade)
+        if (trade['P&L'] && trade['P&L'] !== '—') {
+          // Extract the dollar amount from P&L string (e.g., "+$150.00 (+15.0%)")
+          const pnlMatch = trade['P&L'].match(/^([+-])\$([\d,]+\.?\d*)/);
+          if (pnlMatch) {
+            const sign = pnlMatch[1];
+            const amount = parseFloat(pnlMatch[2].replace(/,/g, ''));
+            
+            // A trade is a win if it has a positive dollar amount
+            if (sign === '+' && amount > 0) {
+              winningTrades++;
+            }
+          }
+        }
+      }
+    });
+
+    return totalCompletedTrades > 0 ? Math.round((winningTrades / totalCompletedTrades) * 100) : 0;
   };
 
   return (
@@ -263,21 +304,137 @@ const BacktestPage: React.FC = () => {
           <div className="results-container">
             <h2>Backtest Results</h2>
             
-
-            
-            <div className="results-grid">
-              {Object.entries(results.stats).map(([key, value]) => (
-                <div key={key} className="stat-item">
-                  <span>{key.replace(/_/g, ' ').replace('pct', '%')}</span>
-                  <strong>{typeof (value as any) === 'number' ? (value as number).toFixed(2) : String(value)}</strong>
+            {/* Enhanced Backtest Summary */}
+            <div className="enhanced-summary-grid">
+              <div className="summary-card primary">
+                <div className="summary-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v20M2 12h20"/>
+                  </svg>
                 </div>
-              ))}
+                <div className="summary-content">
+                  <h3>Total P&L</h3>
+                  <div className={`summary-value ${parseFloat(results.stats['Return [%]']) >= 0 ? 'positive' : 'negative'}`}>
+                    {parseFloat(results.stats['Return [%]']) >= 0 ? '+' : ''}{results.stats['Return [%]']}%
+                  </div>
+                </div>
+              </div>
+              
+              <div className="summary-card">
+                <div className="summary-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v20M2 12h20"/>
+                  </svg>
+                </div>
+                <div className="summary-content">
+                  <h3>Final Equity</h3>
+                  <div className="summary-value">
+                    {results.stats['Equity Final [$]']}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="summary-card">
+                <div className="summary-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 3v18h18"/>
+                    <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                  </svg>
+                </div>
+                <div className="summary-content">
+                  <h3>Total Trades</h3>
+                  <div className="summary-value">
+                    {results.stats['# Trades']}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="summary-card">
+                <div className="summary-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 12l2 2 4-4"/>
+                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+                  </svg>
+                </div>
+                <div className="summary-content">
+                  <h3>Win Rate</h3>
+                  <div className="summary-value">
+                    {calculateWinRate(results.trades)}%
+                  </div>
+                </div>
+              </div>
             </div>
+
             <h3>Equity Curve</h3>
             <div className="chart-container">
               <ReactECharts option={getChartOptions()} style={{ height: '400px', width: '100%' }} notMerge={true} lazyUpdate={true} />
             </div>
 
+            {/* Enhanced Trades Table */}
+            {results.trades && results.trades.length > 0 && (
+              <div className="trades-section">
+                <h3>Trade History</h3>
+                <div className="trades-table-container">
+                  <table className="trades-table">
+                    <thead>
+                      <tr>
+                        <th>Date & Time</th>
+                        <th>Type</th>
+                        <th>Price</th>
+                        <th>Position Size</th>
+                        <th>Leverage</th>
+                        <th>Portfolio Value</th>
+                        <th>P&L</th>
+                        <th>Exit Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {results.trades.map((trade, index) => {
+                        // Determine exit reason based on trade type
+                        let exitReason = '';
+                        if (trade.Type === 'LONG' || trade.Type === 'SHORT') {
+                          exitReason = 'Signal Entry';
+                        } else if (trade.Type.includes('EXIT')) {
+                          // Check if it's a stop loss or take profit exit
+                          if (trade.Type.includes('MARGIN CALL')) {
+                            exitReason = 'Margin Call';
+                          } else {
+                            exitReason = trade['Exit Reason'] || 'Signal Exit';
+                          }
+                        }
+                        
+                        // Determine trade type styling
+                        const isEntry = trade.Type === 'LONG' || trade.Type === 'SHORT';
+                        const isExit = trade.Type.includes('EXIT');
+                        
+                        return (
+                          <tr key={index} className={`trade-row ${isEntry ? 'entry' : isExit ? 'exit' : 'margin-call'}`}>
+                            <td className="trade-date">{trade.Date}</td>
+                            <td className="trade-type">
+                              <span className={`trade-type-badge ${isEntry ? 'entry' : isExit ? 'exit' : 'margin-call'}`}>
+                                {trade.Type}
+                              </span>
+                            </td>
+                            <td className="trade-price">${trade.Price}</td>
+                            <td className="trade-size">{trade['Position Size']}</td>
+                            <td className="trade-leverage">{trade.Leverage}</td>
+                            <td className="trade-portfolio">{trade.Portfolio}</td>
+                            <td className={`trade-pnl ${trade['P&L'] !== '—' ? (trade['P&L'].includes('+') ? 'positive' : 'negative') : ''}`}>
+                              {trade['P&L']}
+                            </td>
+                            <td className="trade-reason">
+                              <span className="exit-reason-badge">
+                                {exitReason}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

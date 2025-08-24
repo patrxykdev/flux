@@ -1,13 +1,17 @@
 // frontend/src/components/backtester/TickerSelector.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { tickerOptions, categories, searchTickers } from './tickerData';
-import type { TickerOption } from './tickerData';
+import api from '../../api';
 import './TickerSelector.css';
 
 interface TickerSelectorProps {
   value: string;
   onChange: (ticker: string) => void;
   placeholder?: string;
+}
+
+interface AvailableData {
+  tickers: string[];
+  ticker_data: { [key: string]: string[] };
 }
 
 const TickerSelector: React.FC<TickerSelectorProps> = ({ 
@@ -17,11 +21,35 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [availableData, setAvailableData] = useState<AvailableData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Fetch available tickers and timeframes
+  useEffect(() => {
+    const fetchAvailableData = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/api/available-data/');
+        setAvailableData(response.data);
+        setError('');
+      } catch (err: any) {
+        console.error('Error fetching available data:', err);
+        setError('Failed to load available tickers');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAvailableData();
+  }, []);
+
   // Filter tickers based on search
-  const filteredTickers = searchTickers(searchQuery);
+  const filteredTickers = availableData?.tickers.filter(ticker => 
+    ticker.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -35,8 +63,8 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleTickerSelect = (ticker: TickerOption) => {
-    onChange(ticker.symbol);
+  const handleTickerSelect = (ticker: string) => {
+    onChange(ticker);
     setIsOpen(false);
     setSearchQuery('');
   };
@@ -50,18 +78,53 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
     setIsOpen(true);
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Stocks':
-        return '📈';
-      case 'Forex':
-        return '💱';
-      case 'Crypto':
-        return '₿';
-      default:
-        return '📊';
+  const getCategoryIcon = (ticker: string) => {
+    if (ticker.includes('USD') && ticker.length > 3) {
+      return '₿'; // Crypto
+    } else if (ticker.includes('USD') || ticker.includes('JPY') || ticker.includes('EUR')) {
+      return '💱'; // Forex
+    } else {
+      return '📈'; // Stocks
     }
   };
+
+  if (loading) {
+    return (
+      <div className="ticker-selector">
+        <div className="ticker-input-container">
+          <input
+            type="text"
+            value={value || ''}
+            placeholder="Loading tickers..."
+            className="ticker-input"
+            disabled
+          />
+          <button className="ticker-dropdown-button" disabled>
+            ▼
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="ticker-selector">
+        <div className="ticker-input-container">
+          <input
+            type="text"
+            value={value || ''}
+            placeholder="Error loading tickers"
+            className="ticker-input"
+            disabled
+          />
+          <button className="ticker-dropdown-button" disabled>
+            ▼
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ticker-selector" ref={dropdownRef}>
@@ -85,7 +148,6 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
 
       {isOpen && (
         <div className="ticker-dropdown">
-
           {/* Search Results */}
           {searchQuery && (
             <div className="ticker-results">
@@ -97,16 +159,20 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
               ) : (
                 filteredTickers.map(ticker => (
                   <div
-                    key={ticker.symbol}
-                    className={`ticker-option ${value === ticker.symbol ? 'selected' : ''}`}
+                    key={ticker}
+                    className={`ticker-option ${value === ticker ? 'selected' : ''}`}
                     onClick={() => handleTickerSelect(ticker)}
                   >
-                    <div className="ticker-symbol">{ticker.symbol}</div>
+                    <div className="ticker-symbol">{ticker}</div>
                     <div className="ticker-info">
-                      <div className="ticker-name">{ticker.name}</div>
                       <div className="ticker-details">
-                        <span className="ticker-category">{getCategoryIcon(ticker.category)} {ticker.category}</span>
-                        <span className="ticker-price">{ticker.currentPrice}</span>
+                        <span className="ticker-category">
+                          {getCategoryIcon(ticker)} {ticker.includes('USD') && ticker.length > 3 ? 'Crypto' : 
+                           ticker.includes('USD') || ticker.includes('JPY') || ticker.includes('EUR') ? 'Forex' : 'Stock'}
+                        </span>
+                        <span className="ticker-timeframes">
+                          {availableData?.ticker_data[ticker]?.join(', ') || 'No timeframes'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -115,31 +181,29 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
             </div>
           )}
 
-          {/* Category-based Display */}
+          {/* All Available Tickers */}
           {!searchQuery && (
             <div className="category-display">
-              {categories.map(category => {
-                const categoryTickers = tickerOptions.filter(t => t.category === category);
-                return (
-                  <div key={category} className="category-section">
-                    <div className="category-header">
-                      {getCategoryIcon(category)} {category}
-                    </div>
-                    <div className="category-tickers">
-                      {categoryTickers.map(ticker => (
-                        <button
-                          key={ticker.symbol}
-                          className={`category-ticker ${value === ticker.symbol ? 'selected' : ''}`}
-                          onClick={() => handleTickerSelect(ticker)}
-                        >
-                          <div className="ticker-symbol">{ticker.symbol}</div>
-                          <div className="ticker-price">{ticker.currentPrice}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+              <div className="category-section">
+                <div className="category-header">
+                  📊 Available Tickers ({availableData?.tickers.length || 0})
+                </div>
+                <div className="category-tickers">
+                  {availableData?.tickers.map(ticker => (
+                    <button
+                      key={ticker}
+                      className={`category-ticker ${value === ticker ? 'selected' : ''}`}
+                      onClick={() => handleTickerSelect(ticker)}
+                    >
+                      <div className="ticker-symbol">{ticker}</div>
+                      <div className="ticker-timeframes">
+                        {availableData?.ticker_data[ticker]?.slice(0, 3).join(', ')}
+                        {availableData?.ticker_data[ticker]?.length > 3 && '...'}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

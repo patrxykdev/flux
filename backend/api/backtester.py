@@ -102,53 +102,68 @@ def calculate_position_size(entry_condition: dict, current_portfolio_value: floa
     sizing_type = entry_condition.get('positionSizing', 'fixed_percentage')
     sizing_value = entry_condition.get('sizingValue', 2)
     
+    print(f"DEBUG: calculate_position_size - Entry condition: {entry_condition}")
+    print(f"DEBUG: calculate_position_size - Sizing type: {sizing_type}, Sizing value: {sizing_value}")
+    print(f"DEBUG: calculate_position_size - Portfolio value: ${current_portfolio_value:,.2f}")
+    
     if sizing_type == 'fixed_percentage':
         # Use fixed percentage of portfolio
         position_value = current_portfolio_value * (sizing_value / 100)
-        max_position = entry_condition.get('maxPositionSize', 10)
-        max_position_value = current_portfolio_value * (max_position / 100)
-        return min(position_value, max_position_value)
+        print(f"DEBUG: calculate_position_size - Fixed percentage: {sizing_value}% of ${current_portfolio_value:,.2f} = ${position_value:,.2f}")
+        print(f"DEBUG: calculate_position_size - Final position: ${position_value:,.2f}")
+        return position_value
     
     elif sizing_type == 'fixed_dollar':
         # Use fixed dollar amount
         position_value = sizing_value
-        max_position = entry_condition.get('maxPositionSize', 10)
-        max_position_value = current_portfolio_value * (max_position / 100)
-        return min(position_value, max_position_value)
+        print(f"DEBUG: calculate_position_size - Fixed dollar: ${sizing_value:,.2f}")
+        print(f"DEBUG: calculate_position_size - Final position: ${position_value:,.2f}")
+        return position_value
     
     elif sizing_type == 'risk_based':
         # Risk-based sizing (1-2% risk per trade)
         risk_per_trade = entry_condition.get('riskPerTrade', 1)
         position_value = current_portfolio_value * (risk_per_trade / 100)
-        max_position = entry_condition.get('maxPositionSize', 10)
-        max_position_value = current_portfolio_value * (max_position / 100)
-        return min(position_value, max_position_value)
+        print(f"DEBUG: calculate_position_size - Risk based: {risk_per_trade}% of ${current_portfolio_value:,.2f} = ${position_value:,.2f}")
+        print(f"DEBUG: calculate_position_size - Final position: ${position_value:,.2f}")
+        return position_value
     
     elif sizing_type == 'kelly_criterion':
         # Kelly Criterion sizing (simplified implementation)
         # In a real implementation, this would use win rate and odds
         kelly_fraction = 0.25  # Conservative Kelly fraction
         position_value = current_portfolio_value * kelly_fraction
-        max_position = entry_condition.get('maxPositionSize', 10)
-        max_position_value = current_portfolio_value * (max_position / 100)
-        return min(position_value, max_position_value)
+        print(f"DEBUG: calculate_position_size - Kelly criterion: {kelly_fraction * 100}% of ${current_portfolio_value:,.2f} = ${position_value:,.2f}")
+        print(f"DEBUG: calculate_position_size - Final position: ${position_value:,.2f}")
+        return position_value
     
     elif sizing_type == 'volatility_based':
-        # Volatility-adjusted sizing
+        # Volatility-adjusted sizing with proper bounds
         if atr_value is None:
             atr_value = current_price * 0.02  # Default to 2% of price
         
         volatility_period = entry_condition.get('volatilityPeriod', 20)
-        volatility_factor = 1.0 / (atr_value / current_price)  # Inverse of volatility
+        
+        # Calculate volatility as percentage of price
+        volatility_pct = (atr_value / current_price) * 100
+        
+        # Apply volatility adjustment with reasonable bounds
+        # Lower volatility = larger position, but cap at 5x to prevent extreme sizing
+        volatility_factor = min(5.0, max(0.2, 1.0 / max(volatility_pct, 0.1)))
         
         position_value = current_portfolio_value * (sizing_value / 100) * volatility_factor
-        max_position = entry_condition.get('maxPositionSize', 10)
-        max_position_value = current_portfolio_value * (max_position / 100)
-        return min(position_value, max_position_value)
+        
+        print(f"DEBUG: calculate_position_size - Volatility based: {sizing_value}% of ${current_portfolio_value:,.2f} × {volatility_factor:.2f} = ${position_value:,.2f}")
+        print(f"DEBUG: calculate_position_size - Final position: ${position_value:,.2f}")
+        
+        return position_value
     
     else:
         # Default to 2% of portfolio
-        return current_portfolio_value * 0.02
+        position_value = current_portfolio_value * 0.02
+        print(f"DEBUG: calculate_position_size - Default: 2% of ${current_portfolio_value:,.2f} = ${position_value:,.2f}")
+        print(f"DEBUG: calculate_position_size - Final position: ${position_value:,.2f}")
+        return position_value
 
 def should_exit_position_enhanced(exit_condition: dict, position_type: str, entry_price: float, 
                                 current_price: float, current_date, entry_date, highest_price: float, 
@@ -316,6 +331,10 @@ def run_backtest(data_df: pd.DataFrame, strategy_config: dict, initial_cash: flo
     """Main backtesting function with comprehensive error handling."""
     from api.indicators import add_indicators_to_data
     
+    print(f"DEBUG: run_backtest - Strategy config received: {strategy_config}")
+    print(f"DEBUG: run_backtest - Initial cash: ${initial_cash:,.2f}")
+    print(f"DEBUG: run_backtest - Leverage: {leverage}x")
+    
     # Validate inputs
     if data_df.empty:
         raise ValueError("Input data is empty")
@@ -339,6 +358,10 @@ def run_backtest(data_df: pd.DataFrame, strategy_config: dict, initial_cash: flo
         # 3. Simulate Portfolio: Loop through prices and signals to simulate trades.
         exit_condition = strategy_config.get('exitCondition', {'stopLoss': {'type': 'fixed_percentage', 'value': 5}, 'takeProfit': {'type': 'risk_reward_ratio', 'value': 2, 'riskRewardRatio': 2}})
         entry_condition = strategy_config.get('entryCondition', {'positionSizing': 'fixed_percentage', 'sizingValue': 2})
+        
+        print(f"DEBUG: run_backtest - Exit condition: {exit_condition}")
+        print(f"DEBUG: run_backtest - Entry condition: {entry_condition}")
+        
         simulator = PortfolioSimulator(df_with_indicators, signals, initial_cash, leverage, exit_condition, entry_condition)
         results = simulator.run_simulation()
         
@@ -530,6 +553,12 @@ class PortfolioSimulator:
         self.leverage = max(1.0, min(10.0, leverage))  # Clamp leverage between 1x and 10x
         self.exit_condition = exit_condition if exit_condition is not None else {'stopLoss': {'type': 'fixed_percentage', 'value': 5}, 'takeProfit': {'type': 'risk_reward_ratio', 'value': 2, 'riskRewardRatio': 2}}
         self.entry_condition = entry_condition if entry_condition is not None else {'positionSizing': 'fixed_percentage', 'sizingValue': 2}
+        
+        print(f"DEBUG: PortfolioSimulator - Entry condition received: {entry_condition}")
+        print(f"DEBUG: PortfolioSimulator - Entry condition used: {self.entry_condition}")
+        print(f"DEBUG: PortfolioSimulator - Initial cash: ${initial_cash:,.2f}")
+        print(f"DEBUG: PortfolioSimulator - Leverage: {self.leverage}x")
+        
         self.cash = initial_cash
         self.position = 0.0  # Positive for long, negative for short
         self.trades = []
@@ -541,11 +570,12 @@ class PortfolioSimulator:
         self.highest_price = 0  # Track highest price for trailing stops (for long positions)
         self.lowest_price = float('inf')  # Track lowest price for trailing stops (for short positions)
         self.position_value = 0  # Track the actual dollar value of the position
+        self.base_position_value = 0  # Track the base cash amount used for the position
 
-    def should_exit_position(self, current_price: float, current_date, current_index: int) -> bool:
+    def should_exit_position(self, current_price: float, current_date, current_index: int) -> tuple[bool, str]:
         """Check if we should exit the position based on stop loss and take profit conditions."""
         if not self.in_position or self.position == 0:
-            return False
+            return False, ""
         
         # Use the enhanced exit condition checker
         should_exit, exit_reason = should_exit_position_enhanced(
@@ -554,7 +584,7 @@ class PortfolioSimulator:
             self.lowest_price, self.df, current_index
         )
         
-        return should_exit
+        return should_exit, exit_reason
 
     def run_simulation(self):
         """Run the portfolio simulation with proper buy/sell cycles."""
@@ -595,36 +625,48 @@ class PortfolioSimulator:
                         if atr_col in self.df.columns:
                             atr_value = self.df[atr_col].iloc[i]
                     
-                    # Calculate position size
-                    position_value = calculate_position_size(self.entry_condition, current_portfolio_value, current_price, atr_value)
+                    # Calculate base position size (this is the cash we'll actually use)
+                    base_position_value = calculate_position_size(self.entry_condition, current_portfolio_value, current_price, atr_value)
                     
-                    # Apply leverage to position size (but keep cash management conservative)
-                    leveraged_position_value = position_value * self.leverage
+                    print(f"DEBUG: Position Sizing - Portfolio: ${current_portfolio_value:,.2f}, Requested: {self.entry_condition.get('sizingValue', 0)}%, Calculated: ${base_position_value:,.2f}")
                     
-                    # Ensure we don't exceed available cash (use the leveraged amount for shares, but track cash properly)
-                    if leveraged_position_value > self.cash:
-                        leveraged_position_value = self.cash * 0.95  # Use 95% of available cash
-                        position_value = leveraged_position_value / self.leverage  # Adjust base position value
+                    # Apply leverage to determine how many shares we can control
+                    # Leverage allows us to control more shares with the same cash
+                    leveraged_shares_value = base_position_value * self.leverage
+                    print(f"DEBUG: Leverage Applied - Base: ${base_position_value:,.2f} × {self.leverage}x = ${leveraged_shares_value:,.2f}")
                     
-                    # Calculate number of shares (using leveraged position value)
+                    # Ensure we have enough cash for the BASE position (not the leveraged amount)
+                    # The leverage allows us to control more shares with the same cash
+                    if base_position_value > self.cash:
+                        # Cap at 95% of available cash to leave buffer
+                        base_position_value = self.cash * 0.95
+                        leveraged_shares_value = base_position_value * self.leverage
+                        print(f"DEBUG: Position capped by available cash - New base position: ${base_position_value:,.2f}")
+                        print(f"DEBUG: Leveraged shares value after capping: ${leveraged_shares_value:,.2f}")
+                    
+                    # Calculate number of shares (using leveraged shares value)
                     if signal == 'LONG':
                         # Long position: buy shares
-                        shares = leveraged_position_value / current_price
+                        shares = leveraged_shares_value / current_price
                         self.position = shares
                         trade_type = 'LONG'
                         trade_description = f"LONG: {current_date.strftime('%Y-%m-%d')} at ${current_price:.2f}"
                     else:  # SHORT
                         # Short position: sell shares (negative position)
-                        shares = leveraged_position_value / current_price
+                        shares = leveraged_shares_value / current_price
                         self.position = -shares
                         trade_type = 'SHORT'
                         trade_description = f"SHORT: {current_date.strftime('%Y-%m-%d')} at ${current_price:.2f}"
                     
                     # Update cash and position tracking
-                    # For leveraged positions, we only deduct the base position value from cash
+                    # We only deduct the base position value from cash (not the leveraged amount)
                     # The leverage allows us to control more shares with the same cash
-                    self.cash -= position_value  # Deduct base position value from cash
-                    self.position_value = leveraged_position_value  # Track the leveraged position value
+                    self.cash -= base_position_value
+                    self.position_value = leveraged_shares_value  # Track the leveraged position value
+                    self.base_position_value = base_position_value # Track the base position value
+                    
+                    print(f"DEBUG: Entry - Cash: ${self.cash:,.2f}, Base Position: ${base_position_value:,.2f}, Leveraged Value: ${leveraged_shares_value:,.2f}, Shares: {shares:.4f}")
+                    
                     self.in_position = True
                     self.position_type = signal
                     self.entry_price = current_price
@@ -636,18 +678,25 @@ class PortfolioSimulator:
                     else:  # SHORT
                         self.lowest_price = current_price
                     
+                    # Calculate current portfolio value for display (cash + position value)
+                    current_portfolio_display = self.cash + self.base_position_value
+                    
                     self.trades.append({
                         'Date': current_date.strftime('%Y-%m-%d %H:%M'), 
                         'Type': trade_type, 
                         'Price': f"{current_price:.2f}", 
-                        'Portfolio': f"${current_portfolio_value:,.2f}",
+                        'Portfolio': f"${current_portfolio_display:,.2f}",
                         'P&L': '—',  # No P&L for entry trades
                         'Leverage': f"{self.leverage}x",
-                        'Position Size': f"${position_value:,.2f}"
+                        'Position Size': f"${leveraged_shares_value:,.2f}",
+                        'Exit Reason': ''
                     })
-                    print(f"{trade_description}, Value: ${position_value:,.2f}, Leverage: {self.leverage}x, Position Size: ${position_value:,.2f}")
+                    print(f"{trade_description}, Value: ${base_position_value:,.2f}, Leverage: {self.leverage}x, Position Size: ${leveraged_shares_value:,.2f}")
                         
-                elif self.in_position and self.position != 0 and self.should_exit_position(current_price, current_date, i):
+                elif self.in_position and self.position != 0 and self.should_exit_position(current_price, current_date, i)[0]:
+                    # Get exit reason
+                    _, exit_reason = self.should_exit_position(current_price, current_date, i)
+                    
                     # Exit position: close all position
                     if self.position_type == 'LONG':
                         # Close long position: sell shares
@@ -681,17 +730,23 @@ class PortfolioSimulator:
                     
                     # Update cash based on P&L
                     if self.position_type == 'LONG':
-                        # For long: we get the exit value back
-                        self.cash += exit_value
+                        # For long positions: we get back our original cash + P&L
+                        # We originally deducted base_position_value from cash, now we get it back + P&L
+                        old_cash = self.cash
+                        self.cash += self.base_position_value + pnl_amount
+                        print(f"DEBUG: Exit LONG - Old Cash: ${old_cash:,.2f}, Base Position Returned: ${self.base_position_value:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
                     else:  # SHORT
-                        # For short: we pay the exit value (buying back shares)
-                        # But we already have the cash from when we sold short
-                        # So the P&L is the difference between entry and exit
+                        # For short positions: we originally received base_position_value in cash when selling
+                        # Now we pay base_position_value to buy back, plus/minus P&L
+                        # So net effect is just the P&L
+                        old_cash = self.cash
                         self.cash += pnl_amount
+                        print(f"DEBUG: Exit SHORT - Old Cash: ${old_cash:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
                     
                     # Reset position tracking
                     self.position = 0
                     self.position_value = 0
+                    self.base_position_value = 0
                     self.in_position = False
                     self.position_type = None
                     self.entry_price = None
@@ -704,25 +759,31 @@ class PortfolioSimulator:
                         'Portfolio': f"${self.cash:,.2f}",
                         'P&L': pnl_display,
                         'Leverage': f"{self.leverage}x",
-                        'Position Size': '—'
+                        'Position Size': '—',
+                        'Exit Reason': exit_reason
                     })
-                    print(f"{trade_description}, P&L: {pnl_display}, Leverage: {self.leverage}x")
+                    print(f"{trade_description}, P&L: {pnl_display}, Leverage: {self.leverage}x, Reason: {exit_reason}")
                 
-                # Calculate current equity (cash + unrealized P&L if in position)
+                # Calculate current equity (cash + position value + unrealized P&L if in position)
                 if self.in_position and self.entry_price is not None:
                     if self.position_type == 'LONG':
-                        # For long positions: cash + (current price - entry price) * shares
+                        # For long positions: cash + base_position_value + unrealized P&L
+                        # The base_position_value represents the cash we invested in the position
                         price_change = current_price - self.entry_price
                         unrealized_pnl = price_change * abs(self.position)
-                        current_equity = self.cash + unrealized_pnl
+                        current_equity = self.cash + self.base_position_value + unrealized_pnl
+                        print(f"DEBUG: Equity LONG - Cash: ${self.cash:,.2f}, Base Position: ${self.base_position_value:,.2f}, Unrealized P&L: ${unrealized_pnl:,.2f}, Total Equity: ${current_equity:,.2f}")
                     else:  # SHORT
-                        # For short positions: cash + (entry price - current price) * shares
+                        # For short positions: cash + base_position_value + unrealized P&L
+                        # For shorts, base_position_value represents the cash we received from selling
                         price_change = self.entry_price - current_price
                         unrealized_pnl = price_change * abs(self.position)
-                        current_equity = self.cash + unrealized_pnl
+                        current_equity = self.cash + self.base_position_value + unrealized_pnl
+                        print(f"DEBUG: Equity SHORT - Cash: ${self.cash:,.2f}, Base Position: ${self.base_position_value:,.2f}, Unrealized P&L: ${unrealized_pnl:,.2f}, Total Equity: ${current_equity:,.2f}")
                 else:
                     # When not in position, equity is just the cash
                     current_equity = self.cash
+                    print(f"DEBUG: Equity NO POSITION - Cash: ${self.cash:,.2f}, Total Equity: ${current_equity:,.2f}")
                 
                 # Prevent negative equity - implement margin call
                 if current_equity <= 0:
@@ -752,13 +813,20 @@ class PortfolioSimulator:
                         
                         # Update cash based on exit
                         if self.position_type == 'LONG':
-                            self.cash += exit_value
+                            # For long: get back original position value + P&L
+                            old_cash = self.cash
+                            self.cash += self.base_position_value + pnl_amount
+                            print(f"DEBUG: Margin Call LONG - Old Cash: ${old_cash:,.2f}, Base Position Returned: ${self.base_position_value:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
                         else:  # SHORT
+                            # For short: net effect is just P&L
+                            old_cash = self.cash
                             self.cash += pnl_amount
+                            print(f"DEBUG: Margin Call SHORT - Old Cash: ${old_cash:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
                         
                         # Reset position
                         self.position = 0
                         self.position_value = 0
+                        self.base_position_value = 0
                         self.in_position = False
                         self.position_type = None
                         self.entry_price = None
@@ -771,13 +839,81 @@ class PortfolioSimulator:
                             'Portfolio': f"${self.cash:,.2f}",
                             'P&L': pnl_display,
                             'Leverage': f"{self.leverage}x",
-                            'Position Size': '—'
+                            'Position Size': '—',
+                            'Exit Reason': 'Margin Call'
                         })
                         print(f"MARGIN CALL: {trade_type} at ${current_price:.2f}, P&L: {pnl_display}")
                     
                     current_equity = max(0, self.cash)  # Set equity to max of 0 or cash
                 
                 self.equity_curve.append(current_equity)
+            
+            # Close any remaining open positions when data runs out
+            if self.in_position and self.position != 0:
+                print(f"DEBUG: Data finished - closing remaining {self.position_type} position")
+                
+                # Get the last price from the data
+                final_price = self.df['Close'].iloc[-1]
+                final_date = self.df.index[-1]
+                
+                # Calculate final P&L
+                if self.entry_price is not None:
+                    if self.position_type == 'LONG':
+                        # Long position P&L
+                        price_change_pct = ((final_price - self.entry_price) / self.entry_price) * 100
+                        pnl_amount = (final_price - self.entry_price) * abs(self.position)
+                    else:  # SHORT
+                        # Short position P&L (profit when price goes down)
+                        price_change_pct = ((self.entry_price - final_price) / self.entry_price) * 100
+                        pnl_amount = (self.entry_price - final_price) * abs(self.position)
+                    
+                    # Format P&L display
+                    if pnl_amount >= 0:
+                        pnl_display = f"+${pnl_amount:,.2f} (+{price_change_pct:.2f}%)"
+                    else:
+                        pnl_display = f"-${abs(pnl_amount):,.2f} ({price_change_pct:.2f}%)"
+                else:
+                    pnl_display = "N/A"
+                
+                # Update cash based on final P&L
+                if self.position_type == 'LONG':
+                    # For long positions: we get back our original cash + P&L
+                    old_cash = self.cash
+                    self.cash += self.base_position_value + pnl_amount
+                    print(f"DEBUG: Data End Exit LONG - Old Cash: ${old_cash:,.2f}, Base Position Returned: ${self.base_position_value:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
+                else:  # SHORT
+                    # For short positions: net effect is just P&L
+                    old_cash = self.cash
+                    self.cash += pnl_amount
+                    print(f"DEBUG: Data End Exit SHORT - Old Cash: ${old_cash:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
+                
+                # Add final trade to history
+                trade_type = f"EXIT {self.position_type}"
+                self.trades.append({
+                    'Date': final_date.strftime('%Y-%m-%d %H:%M'), 
+                    'Type': trade_type, 
+                    'Price': f"{final_price:.2f}", 
+                    'Portfolio': f"${self.cash:,.2f}",
+                    'P&L': pnl_display,
+                    'Leverage': f"{self.leverage}x",
+                    'Position Size': '—',
+                    'Exit Reason': 'Data Finished'
+                })
+                
+                print(f"Data Finished: {trade_type} at ${final_price:.2f}, P&L: {pnl_display}")
+                
+                # Reset position tracking
+                self.position = 0
+                self.position_value = 0
+                self.base_position_value = 0
+                self.in_position = False
+                self.position_type = None
+                self.entry_price = None
+                self.entry_date = None
+                
+                # Calculate final equity (should be just cash now)
+                final_equity = self.cash
+                self.equity_curve.append(final_equity)
             
             return self._format_results()
             

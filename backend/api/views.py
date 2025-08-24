@@ -1,9 +1,6 @@
 import os
-from polygon import RESTClient
 from datetime import datetime
 import pandas as pd
-import yfinance as yf  # Add yfinance as fallback
-from alpha_vantage.timeseries import TimeSeries
 import numpy as np
 
 from rest_framework.views import APIView
@@ -17,233 +14,33 @@ from django.contrib.auth.models import User
 from .models import Strategy, Backtest
 from .serializers import UserSerializer, StrategySerializer, BacktestSerializer
 from .backtester import run_backtest
+from .csv_data_loader import load_csv_data, get_available_tickers, get_available_timeframes
 
-def fetch_data_from_polygon(ticker, start_date, end_date, timeframe):
-    """Fetch data from Polygon.io"""
-    api_key = os.environ.get("POLYGON_API_KEY")
-    if not api_key:
-        raise ValueError("Polygon API key not configured")
-    
-    client = RESTClient(api_key)
-    
-    # Map frontend timeframe to Polygon's 'timespan'
-    timespan_map = {'5m': 'minute', '15m': 'minute', '1h': 'hour', '1d': 'day'}
-    multiplier_map = {'5m': 5, '15m': 15, '1h': 1, '1d': 1}
-    
-    # Handle crypto tickers for Polygon
-    polygon_ticker = ticker.upper()
-    if ticker.endswith('USD') and len(ticker) > 3:  # Crypto ticker
-        polygon_ticker = f"X:{ticker.upper()}"  # Polygon crypto format
-    
-    aggs = client.get_aggs(
-        ticker=polygon_ticker,
-        multiplier=multiplier_map.get(timeframe, 1),
-        timespan=timespan_map.get(timeframe, 'day'),
-        from_=start_date,
-        to=end_date,
-        limit=50000
-    )
-    
-    if not aggs:
-        raise ValueError(f"No data found for {ticker}")
-    
-    # Convert to DataFrame
-    data = pd.DataFrame(aggs)
-    data['time'] = pd.to_datetime(data['timestamp'], unit='ms')
-    data.set_index('time', inplace=True)
-    
-    # Standardize column names
-    column_mapping = {
-        'o': 'Open', 'h': 'High', 'l': 'Low', 'c': 'Close', 'v': 'Volume',
-        'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume',
-        'O': 'Open', 'H': 'High', 'L': 'Low', 'C': 'Close', 'V': 'Volume'
-    }
-    
-    existing_columns = list(data.columns)
-    for old_col, new_col in column_mapping.items():
-        if old_col in existing_columns:
-            data.rename(columns={old_col: new_col}, inplace=True)
-    
-    # Keep only the required OHLCV columns
-    required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-    available_columns = [col for col in required_columns if col in data.columns]
-    
-    if len(available_columns) < 5:
-        raise ValueError(f"Missing required columns. Available: {available_columns}, Required: {required_columns}")
-    
-    # Select only the required columns
-    data = data[available_columns]
-    
-    # Add data range info
-    data_range_info = {
-        'requested_start': start_date,
-        'requested_end': end_date,
-        'actual_start': data.index.min().strftime('%Y-%m-%d'),
-        'actual_end': data.index.max().strftime('%Y-%m-%d'),
-        'data_points': len(data),
-        'source': 'polygon'
-    }
-    
-    return data, data_range_info
-
-def fetch_data_from_alpha_vantage(ticker, start_date, end_date, timeframe):
-    """Fetch data from Alpha Vantage"""
+def fetch_csv_data(ticker, start_date, end_date, timeframe):
+    """Fetch data from local CSV files"""
     try:
-        api_key = os.environ.get("ALPHA_VANTAGE_API_KEY")
-        if not api_key:
-            raise ValueError("Alpha Vantage API key not configured")
-        
-        ts = TimeSeries(key=api_key, output_format='pandas')
-        
-        # Handle crypto tickers for Alpha Vantage
-        alpha_ticker = ticker
-        if ticker.endswith('USD') and len(ticker) > 3:  # Crypto ticker
-            alpha_ticker = f"{ticker}"  # Alpha Vantage crypto format
-        
-        # Map timeframe to Alpha Vantage function
-        if timeframe == '1d':
-            # Get daily data
-            data, meta_data = ts.get_daily(symbol=alpha_ticker, outputsize='full')
-        elif timeframe in ['5m', '15m', '1h']:
-            # Get intraday data (Alpha Vantage has 1min, 5min, 15min, 30min, 60min)
-            interval_map = {'5m': '5min', '15m': '15min', '1h': '60min'}
-            interval = interval_map.get(timeframe, '60min')
-            data, meta_data = ts.get_intraday(symbol=alpha_ticker, interval=interval, outputsize='full')
-        else:
-            raise ValueError(f"Unsupported timeframe for Alpha Vantage: {timeframe}")
-        
-        if data.empty:
-            raise ValueError(f"No data found for {ticker}")
-        
-        # Standardize Alpha Vantage columns to Open, High, Low, Close, Volume
-        av_column_mapping = {
-            '1. open': 'Open',
-            '2. high': 'High',
-            '3. low': 'Low',
-            '4. close': 'Close',
-            '5. volume': 'Volume',
-            'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'
-        }
-        data.rename(columns=av_column_mapping, inplace=True)
-        
-        # Alpha Vantage returns data in reverse chronological order (newest first)
-        # Sort to chronological order (oldest first) for proper backtesting
-        data = data.sort_index()
-        
-        # Filter by date range
-        start_dt = pd.to_datetime(start_date)
-        end_dt = pd.to_datetime(end_date)
-        data = data[(data.index >= start_dt) & (data.index <= end_dt)]
-        
-        if data.empty:
-            raise ValueError(f"No data found for {ticker} in the specified date range")
-        
-        # Add data range info
-        data_range_info = {
-            'requested_start': start_date,
-            'requested_end': end_date,
-            'actual_start': data.index.min().strftime('%Y-%m-%d'),
-            'actual_end': data.index.max().strftime('%Y-%m-%d'),
-            'data_points': len(data),
-            'source': 'alpha_vantage'
-        }
-        
+        data, data_range_info = load_csv_data(ticker, start_date, end_date, timeframe)
         return data, data_range_info
-        
     except Exception as e:
-        raise ValueError(f"Alpha Vantage error: {str(e)}")
+        raise ValueError(f"CSV data loading error: {str(e)}")
 
-def fetch_data_from_yfinance(ticker, start_date, end_date, timeframe):
-    """Fetch data from yfinance as primary source"""
-    try:
-        # Handle crypto tickers for yfinance
-        yfinance_ticker = ticker
-        if ticker.endswith('USD') and len(ticker) > 3:  # Crypto ticker
-            yfinance_ticker = f"{ticker}-USD"  # yfinance crypto format
-        
-        # Download data from yfinance
-        ticker_obj = yf.Ticker(yfinance_ticker)
-        
-        # Map timeframe to yfinance interval
-        # Frontend sends: '5m', '15m', '1h', '1d'
-        # yfinance expects: '5m', '15m', '1h', '1d'
-        interval_map = {'5m': '5m', '15m': '15m', '1h': '1h', '1d': '1d'}
-        interval = interval_map.get(timeframe, '1d')
-        
-        print(f"yfinance: Using interval '{interval}' for timeframe '{timeframe}'")
-        
-        # For intraday data, we need to limit the period
-        if timeframe in ['5m', '15m', '1h']:
-            # yfinance has limits for intraday data
-            data = ticker_obj.history(period="60d", interval=interval)
-        else:
-            # For daily data, yfinance can handle much longer periods
-            # Convert dates to datetime for better handling
-            start_dt = pd.to_datetime(start_date)
-            end_dt = pd.to_datetime(end_date)
-            
-            # yfinance can handle very long periods, up to decades
-            data = ticker_obj.history(start=start_dt, end=end_dt, interval=interval)
-        
-        if data.empty:
-            raise ValueError(f"No data found for {ticker}")
-        
-        # yfinance already has the correct column names (Open, High, Low, Close, Volume)
-        
-        # Add data range info
-        data_range_info = {
-            'requested_start': start_date,
-            'requested_end': end_date,
-            'actual_start': data.index.min().strftime('%Y-%m-%d'),
-            'actual_end': data.index.max().strftime('%Y-%m-%d'),
-            'data_points': len(data),
-            'source': 'yfinance'
-        }
-        
-        return data, data_range_info
-        
-    except Exception as e:
-        raise ValueError(f"yfinance error: {str(e)}")
+
+
+
 
 def fetch_market_data(ticker, start_date, end_date, timeframe):
-    """Fetch market data with multiple sources: yfinance > Polygon > Alpha Vantage"""
-    errors = []
-    
-    # Try yfinance first (best historical data coverage, free, no API key required)
+    """
+    Fetch market data from local CSV files.
+    """
     try:
-        print(f"Attempting to fetch data from yfinance for {ticker}")
-        data, data_range_info = fetch_data_from_yfinance(ticker, start_date, end_date, timeframe)
-        print(f"Successfully fetched data from yfinance: {data.shape}")
+        print(f"Loading CSV data for {ticker}")
+        data, data_range_info = fetch_csv_data(ticker, start_date, end_date, timeframe)
+        print(f"Successfully loaded CSV data: {data.shape}")
         return data, data_range_info
     except Exception as e:
-        error_msg = f"yfinance failed: {str(e)}"
+        error_msg = f"CSV data loading failed: {str(e)}"
         print(error_msg)
-        errors.append(error_msg)
-    
-    # Try Polygon second (professional-grade, reliable when API key is configured)
-    try:
-        print(f"Attempting to fetch data from Polygon for {ticker}")
-        data, data_range_info = fetch_data_from_polygon(ticker, start_date, end_date, timeframe)
-        print(f"Successfully fetched data from Polygon: {data.shape}")
-        return data, data_range_info
-    except Exception as e:
-        error_msg = f"Polygon failed: {str(e)}"
-        print(error_msg)
-        errors.append(error_msg)
-    
-    # Fallback to Alpha Vantage (reliable, good historical data, free tier)
-    try:
-        print(f"Attempting to fetch data from Alpha Vantage for {ticker}")
-        data, data_range_info = fetch_data_from_alpha_vantage(ticker, start_date, end_date, timeframe)
-        print(f"Successfully fetched data from Alpha Vantage: {data.shape}")
-        return data, data_range_info
-    except Exception as e:
-        error_msg = f"Alpha Vantage failed: {str(e)}"
-        print(error_msg)
-        errors.append(error_msg)
-    
-    # If all failed
-    raise ValueError(f"All data sources failed. Errors: {'; '.join(errors)}")
+        raise ValueError(error_msg)
 
 # ... (The rest of your views: RegisterView, ProfileView, StrategyViewSet, etc.) ...
 
@@ -450,6 +247,10 @@ class BacktestView(APIView):
 
             # --- RUN THE BACKTESTING ENGINE ---
             try:
+                print(f"DEBUG: Strategy configuration: {strategy.configuration}")
+                print(f"DEBUG: Initial cash: ${cash:,.2f}")
+                print(f"DEBUG: Leverage: {leverage}x")
+                
                 results = run_backtest(data, strategy.configuration, cash, leverage)
                 
                 # Check if backtest returned an error
@@ -511,5 +312,27 @@ class RecentBacktestsView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Error fetching backtests: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AvailableDataView(APIView):
+    permission_classes = [AllowAny]  # Allow anyone to see available data
+    
+    def get(self, request):
+        """Get available tickers and timeframes from CSV data"""
+        try:
+            tickers = get_available_tickers()
+            
+            # Get timeframes for each ticker
+            ticker_data = {}
+            for ticker in tickers:
+                timeframes = get_available_timeframes(ticker)
+                ticker_data[ticker] = timeframes
+            
+            return Response({
+                'tickers': tickers,
+                'ticker_data': ticker_data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": f"Error fetching available data: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
