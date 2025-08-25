@@ -197,108 +197,205 @@ const BacktestPage: React.FC = () => {
         </div>
       </header>
       <main className="backtest-content">
-        <h1>Backtest a Strategy</h1>
+        <div className="page-header">
+          <h1>Backtest Strategy</h1>
+          <p className="page-subtitle">Test your trading strategy against historical data to validate performance</p>
+        </div>
         
-        <div className="backtest-setup-card">
-          <div className="setup-row">
-            <div className="setup-group">
-              <label>Strategy</label>
-              <select value={selectedStrategy} onChange={(e) => {
-                console.log('Strategy selected:', e.target.value);
-                setSelectedStrategy(e.target.value);
-              }}>
-                <option value="" disabled>Select a strategy...</option>
-                {strategies.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+        <div className="backtest-setup-container">
+          <div className="setup-card">
+            <div className="setup-header">
+              <div className="setup-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </div>
+              <div className="setup-title">
+                <h2>Strategy Configuration</h2>
+                <p>Configure your trading strategy parameters and market settings</p>
+              </div>
             </div>
-            
-            <div className="setup-group">
-              <label>Ticker</label>
-              <TickerSelector 
-                value={ticker} 
-                onChange={setTicker}
-                placeholder="Search tickers..."
-              />
-            </div>
-            
-            <div className="setup-group">
-              <label>Timeframe</label>
-              <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
-                <option value="5m">5 Minute</option>
-                <option value="15m">15 Minute</option>
-                <option value="1h">1 Hour</option>
-                <option value="1d">1 Day</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="setup-row">
-            <div className="setup-group">
-              <label>Start Date</label>
-              <DatePicker
-                selected={startDate ? parseISO(startDate) : null}
-                onChange={date => {
-                  if (!date) return;
-                  const formatted = format(date, 'yyyy-MM-dd');
-                  setStartDate(formatted);
-                }}
-                maxDate={new Date()}
-                dateFormat="yyyy-MM-dd"
-                showPopperArrow={false}
-                className="custom-datepicker"
-                calendarClassName="custom-calendar"
-              />
-            </div>
-            
-            <div className="setup-group">
-              <label>End Date</label>
-              <DatePicker
-                selected={endDate ? parseISO(endDate) : null}
-                onChange={date => {
-                  if (!date) return;
-                  const formatted = format(date, 'yyyy-MM-dd');
-                  if (date > new Date()) {
-                    setEndDate(format(new Date(), 'yyyy-MM-dd'));
-                  } else {
-                    setEndDate(formatted);
-                  }
-                }}
-                maxDate={new Date()}
-                dateFormat="yyyy-MM-dd"
-                showPopperArrow={false}
-                className="custom-datepicker"
-                calendarClassName="custom-calendar"
-              />
-            </div>
-            
-            <div className="setup-group">
-              <label>Starting Capital</label>
-              <input type="number" value={cash} onChange={(e) => setCash(e.target.value)} placeholder="$10,000" />
-            </div>
-            
-            <div className="setup-group">
-              <label>Leverage</label>
-              <select value={leverage} onChange={(e) => setLeverage(e.target.value)}>
-                <option value="1">1x (No Leverage)</option>
-                <option value="2">2x</option>
-                <option value="3">3x</option>
-                <option value="5">5x</option>
-                <option value="10">10x</option>
-              </select>
-            </div>
-            
-            <div className="setup-group">
-              <label>&nbsp;</label>
-              <button onClick={handleRunBacktest} disabled={isLoading} className="run-backtest-btn">
-                {isLoading ? 'Running...' : 'Run Backtest'}
-              </button>
+
+            <div className="setup-form">
+              <div className="form-section">
+                <h3>Strategy & Market</h3>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="strategy-select">Strategy</label>
+                    <select 
+                      id="strategy-select"
+                      value={selectedStrategy} 
+                      onChange={(e) => {
+                        console.log('Strategy selected:', e.target.value);
+                        setSelectedStrategy(e.target.value);
+                      }}
+                      className="form-select"
+                    >
+                      <option value="" disabled>Choose a strategy...</option>
+                      {strategies.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="ticker-select">Ticker</label>
+                    <TickerSelector 
+                      value={ticker} 
+                      onChange={setTicker}
+                      placeholder="Search tickers..."
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="timeframe-select">Timeframe</label>
+                    <select 
+                      id="timeframe-select"
+                      value={timeframe} 
+                      onChange={(e) => setTimeframe(e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="5m">5 Minute</option>
+                      <option value="15m">15 Minute</option>
+                      <option value="1h">1 Hour</option>
+                      <option value="1d">1 Day</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h3>Date Range</h3>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="start-date">Start Date</label>
+                    <DatePicker
+                      id="start-date"
+                      selected={startDate ? parseISO(startDate) : null}
+                      onChange={date => {
+                        if (!date) return;
+                        const formatted = format(date, 'yyyy-MM-dd');
+                        setStartDate(formatted);
+                      }}
+                      maxDate={new Date()}
+                      dateFormat="yyyy-MM-dd"
+                      showPopperArrow={false}
+                      className="form-datepicker"
+                      calendarClassName="custom-calendar"
+                      placeholderText="Select start date"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="end-date">End Date</label>
+                    <DatePicker
+                      id="end-date"
+                      selected={endDate ? parseISO(endDate) : null}
+                      onChange={date => {
+                        if (!date) return;
+                        const formatted = format(date, 'yyyy-MM-dd');
+                        if (date > new Date()) {
+                          setEndDate(format(new Date(), 'yyyy-MM-dd'));
+                        } else {
+                          setEndDate(formatted);
+                        }
+                      }}
+                      maxDate={new Date()}
+                      dateFormat="yyyy-MM-dd"
+                      showPopperArrow={false}
+                      className="form-datepicker"
+                      calendarClassName="custom-calendar"
+                      placeholderText="Select end date"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h3>Capital & Risk</h3>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="capital-input">Starting Capital</label>
+                    <div className="input-with-prefix">
+                      <span className="input-prefix">$</span>
+                      <input 
+                        id="capital-input"
+                        type="number" 
+                        value={cash} 
+                        onChange={(e) => setCash(e.target.value)} 
+                        placeholder="10,000"
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="leverage-select">Leverage</label>
+                    <select 
+                      id="leverage-select"
+                      value={leverage} 
+                      onChange={(e) => setLeverage(e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="1">1x (No Leverage)</option>
+                      <option value="2">2x</option>
+                      <option value="3">3x</option>
+                      <option value="5">5x</option>
+                      <option value="10">10x</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <button 
+                  onClick={handleRunBacktest} 
+                  disabled={isLoading || !selectedStrategy} 
+                  className="run-backtest-button"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="loading-spinner-small"></div>
+                      Running Backtest...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M5 3l14 9-14 9V3z"/>
+                      </svg>
+                      Run Backtest
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && (
+          <div className="error-alert">
+            <div className="error-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+            </div>
+            <div className="error-content">
+              <h4>Error</h4>
+              <p>{error}</p>
+            </div>
+          </div>
+        )}
 
-        {isLoading && <div className="loading-spinner"></div>}
+        {isLoading && (
+          <div className="loading-overlay">
+            <div className="loading-content">
+              <div className="loading-spinner"></div>
+              <h3>Running Backtest</h3>
+              <p>Please wait while we analyze your strategy...</p>
+            </div>
+          </div>
+        )}
 
         {results && (
           <div className="results-container">

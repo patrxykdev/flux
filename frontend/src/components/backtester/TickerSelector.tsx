@@ -14,6 +14,12 @@ interface AvailableData {
   ticker_data: { [key: string]: string[] };
 }
 
+interface CategorizedTickers {
+  forex: string[];
+  crypto: string[];
+  stocks: string[];
+}
+
 const TickerSelector: React.FC<TickerSelectorProps> = ({ 
   value, 
   onChange, 
@@ -45,6 +51,27 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
 
     fetchAvailableData();
   }, []);
+
+  // Categorize tickers by type
+  const categorizeTickers = (tickers: string[]): CategorizedTickers => {
+    const categorized: CategorizedTickers = {
+      forex: [],
+      crypto: [],
+      stocks: []
+    };
+
+    tickers.forEach(ticker => {
+      if (ticker.includes('USDT') || ticker.includes('BTC') || ticker.includes('ETH')) {
+        categorized.crypto.push(ticker);
+      } else if (ticker.includes('USD') || ticker.includes('JPY') || ticker.includes('EUR') || ticker.includes('GBP') || ticker.includes('CHF') || ticker.includes('CAD') || ticker.includes('AUD') || ticker.includes('NZD')) {
+        categorized.forex.push(ticker);
+      } else {
+        categorized.stocks.push(ticker);
+      }
+    });
+
+    return categorized;
+  };
 
   // Filter tickers based on search
   const filteredTickers = availableData?.tickers.filter(ticker => 
@@ -78,13 +105,13 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
     setIsOpen(true);
   };
 
-  const getCategoryIcon = (ticker: string) => {
-    if (ticker.includes('USD') && ticker.length > 3) {
-      return '₿'; // Crypto
-    } else if (ticker.includes('USD') || ticker.includes('JPY') || ticker.includes('EUR')) {
-      return '💱'; // Forex
+  const getCategoryLabel = (ticker: string): string => {
+    if (ticker.includes('USDT') || ticker.includes('BTC') || ticker.includes('ETH')) {
+      return 'Crypto';
+    } else if (ticker.includes('USD') || ticker.includes('JPY') || ticker.includes('EUR') || ticker.includes('GBP') || ticker.includes('CHF') || ticker.includes('CAD') || ticker.includes('AUD') || ticker.includes('NZD')) {
+      return 'Forex';
     } else {
-      return '📈'; // Stocks
+      return 'Stock';
     }
   };
 
@@ -125,6 +152,8 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
       </div>
     );
   }
+
+  const categorizedTickers = categorizeTickers(availableData?.tickers || []);
 
   return (
     <div className="ticker-selector" ref={dropdownRef}>
@@ -167,11 +196,7 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
                     <div className="ticker-info">
                       <div className="ticker-details">
                         <span className="ticker-category">
-                          {getCategoryIcon(ticker)} {ticker.includes('USD') && ticker.length > 3 ? 'Crypto' : 
-                           ticker.includes('USD') || ticker.includes('JPY') || ticker.includes('EUR') ? 'Forex' : 'Stock'}
-                        </span>
-                        <span className="ticker-timeframes">
-                          {availableData?.ticker_data[ticker]?.join(', ') || 'No timeframes'}
+                          {getCategoryLabel(ticker)}
                         </span>
                       </div>
                     </div>
@@ -181,29 +206,68 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
             </div>
           )}
 
-          {/* All Available Tickers */}
+          {/* All Available Tickers by Category */}
           {!searchQuery && (
             <div className="category-display">
-              <div className="category-section">
-                <div className="category-header">
-                  📊 Available Tickers ({availableData?.tickers.length || 0})
+              {/* Forex Section */}
+              {categorizedTickers.forex.length > 0 && (
+                <div className="category-section">
+                  <div className="category-header">
+                    Forex ({categorizedTickers.forex.length})
+                  </div>
+                  <div className="category-tickers">
+                    {categorizedTickers.forex.map(ticker => (
+                      <button
+                        key={ticker}
+                        className={`category-ticker ${value === ticker ? 'selected' : ''}`}
+                        onClick={() => handleTickerSelect(ticker)}
+                      >
+                        <div className="ticker-symbol">{ticker}</div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="category-tickers">
-                  {availableData?.tickers.map(ticker => (
-                    <button
-                      key={ticker}
-                      className={`category-ticker ${value === ticker ? 'selected' : ''}`}
-                      onClick={() => handleTickerSelect(ticker)}
-                    >
-                      <div className="ticker-symbol">{ticker}</div>
-                      <div className="ticker-timeframes">
-                        {availableData?.ticker_data[ticker]?.slice(0, 3).join(', ')}
-                        {availableData?.ticker_data[ticker]?.length > 3 && '...'}
-                      </div>
-                    </button>
-                  ))}
+              )}
+
+              {/* Crypto Section */}
+              {categorizedTickers.crypto.length > 0 && (
+                <div className="category-section">
+                  <div className="category-header">
+                    Crypto ({categorizedTickers.crypto.length})
+                  </div>
+                  <div className="category-tickers">
+                    {categorizedTickers.crypto.map(ticker => (
+                      <button
+                        key={ticker}
+                        className={`category-ticker ${value === ticker ? 'selected' : ''}`}
+                        onClick={() => handleTickerSelect(ticker)}
+                      >
+                        <div className="ticker-symbol">{ticker}</div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Stocks Section */}
+              {categorizedTickers.stocks.length > 0 && (
+                <div className="category-section">
+                  <div className="category-header">
+                    Stocks ({categorizedTickers.stocks.length})
+                  </div>
+                  <div className="category-tickers">
+                    {categorizedTickers.stocks.map(ticker => (
+                      <button
+                        key={ticker}
+                        className={`category-ticker ${value === ticker ? 'selected' : ''}`}
+                        onClick={() => handleTickerSelect(ticker)}
+                      >
+                        <div className="ticker-symbol">{ticker}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
