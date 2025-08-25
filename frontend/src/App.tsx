@@ -4,6 +4,7 @@ import HomePage from './components/homepage/HomePage';
 import Dashboard from './components/dashboard/Dashboard';
 import StrategyBuilder from './components/builder/StrategyBuilder';
 import DashboardLayout from './components/common/DashboardLayout';
+import EmailVerification from './components/homepage/EmailVerification';
 import './App.css'; 
 import BacktestPage from './components/backtester/BacktestPage';
 import type { JSX } from 'react';
@@ -51,86 +52,89 @@ function AppContent() {
         {/* If logged in, the root path '/' redirects to the dashboard */}
         {/* If not logged in, the root path '/' shows the HomePage */}
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <HomePage />} />
+        
+        {/* Email verification route - no authentication required */}
+        <Route path="/verify-email" element={<EmailVerification />} />
           
-          {/* Dashboard Layout Routes - All pages with sidebar except settings */}
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            } 
-          >
-            <Route index element={<Dashboard />} />
-          </Route>
-          <Route 
-            path="/builder" 
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            } 
-          >
-            <Route index element={<StrategyBuilder />} />
-          </Route>
-          <Route 
-            path="/backtest" 
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            } 
-          >
-            <Route index element={<BacktestPage />} />
-          </Route>
-          <Route 
-            path="/portfolio" 
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            } 
-          >
-            <Route index element={<PortfolioPage />} />
-          </Route>
-          <Route 
-            path="/analytics" 
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            } 
-          >
-            <Route index element={<AnalyticsPage />} />
-          </Route>
-          
-          {/* Settings page - No sidebar */}
-          <Route 
-            path="/settings" 
-            element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} 
-          />
-        </Routes>
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            // Define default options
-            duration: 5000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            // Default options for specific types
-            success: {
-              duration: 3000,
-              iconTheme: {
-                primary: 'green',
-                secondary: 'black',
-              },
-            },
-          }}
+        {/* Dashboard Layout Routes - All pages with sidebar except settings */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          } 
+        >
+          <Route index element={<Dashboard />} />
+        </Route>
+        <Route 
+          path="/builder" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          } 
+        >
+          <Route index element={<StrategyBuilder />} />
+        </Route>
+        <Route 
+          path="/backtest" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          } 
+        >
+          <Route index element={<BacktestPage />} />
+        </Route>
+        <Route 
+          path="/portfolio" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          } 
+        >
+          <Route index element={<PortfolioPage />} />
+        </Route>
+        <Route 
+          path="/analytics" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          } 
+        >
+          <Route index element={<AnalyticsPage />} />
+        </Route>
+        
+        {/* Settings page - No sidebar */}
+        <Route 
+          path="/settings" 
+          element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} 
         />
-      </div>
-    );
+      </Routes>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          // Define default options
+          duration: 5000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          // Default options for specific types
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: 'green',
+              secondary: 'black',
+            },
+          },
+        }}
+      />
+    </div>
+  );
 }
 
 function App() {

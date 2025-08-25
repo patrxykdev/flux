@@ -11,10 +11,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics
 
 from django.contrib.auth.models import User
-from .models import Strategy, Backtest
-from .serializers import UserSerializer, StrategySerializer, BacktestSerializer
+from django.utils import timezone
+from .models import Strategy, Backtest, UserProfile, EmailVerification
+from .serializers import UserSerializer, StrategySerializer, BacktestSerializer, EmailVerificationSerializer
 from .backtester import run_backtest
 from .csv_data_loader import load_csv_data, get_available_tickers, get_available_timeframes
+from .email_utils import send_verification_email, send_welcome_email
 
 def fetch_csv_data(ticker, start_date, end_date, timeframe):
     """Fetch data from local CSV files"""
@@ -55,14 +57,112 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Generate tokens for the new user
-        refresh = RefreshToken.for_user(user)
+        # Create email verification
+        verification = EmailVerification.objects.create(user=user)
+        
+        # Send verification email
+        email_sent = send_verification_email(user, verification.token)
+        
+        if email_sent:
+            # Update user profile to track verification email sent
+            user.profile.email_verification_sent_at = timezone.now()
+            user.profile.save()
+            
+            return Response({
+                "message": "Registration successful! Please check your email to verify your account.",
+                "user": serializer.data,
+                "email_verification_sent": True
+            }, status=status.HTTP_201_CREATED)
+        else:
+            # If email fails, still create the user but inform them
+            return Response({
+                "message": "Registration successful! However, we couldn't send the verification email. Please contact support.",
+                "user": serializer.data,
+                "email_verification_sent": False
+            }, status=status.HTTP_201_CREATED)
 
-        return Response({
-            "user": serializer.data,
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-        }, status=status.HTTP_201_CREATED)
+class VerifyEmailView(APIView):
+    permission_classes = (AllowAny,)
+    
+    def get(self, request):
+        token = request.query_params.get('token')
+        
+        if not token:
+            return Response({"error": "Verification token is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            verification = EmailVerification.objects.get(token=token, is_used=False)
+            
+            if verification.is_expired():
+                return Response({"error": "Verification token has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Mark verification as used
+            verification.is_used = True
+            verification.save()
+            
+            # Mark user's email as verified
+            user = verification.user
+            user.profile.email_verified = True
+            user.profile.save()
+            
+            # Send welcome email
+            send_welcome_email(user)
+            
+            return Response({
+                "message": "Email verified successfully! Welcome to FluxTrader!",
+                "user": UserSerializer(user).data
+            }, status=status.HTTP_200_OK)
+            
+        except EmailVerification.DoesNotExist:
+            return Response({"error": "Invalid verification token."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ResendVerificationEmailView(APIView):
+    permission_classes = (AllowAny,)
+    
+    def post(self, request):
+        email = request.data.get('email')
+        
+        if not email:
+            return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(email=email)
+            
+            # Check if email is already verified
+            if user.profile.email_verified:
+                return Response({"error": "Email is already verified."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if we sent a verification email recently (within last 5 minutes)
+            if user.profile.email_verification_sent_at:
+                time_since_last_email = timezone.now() - user.profile.email_verification_sent_at
+                if time_since_last_email.total_seconds() < 300:  # 5 minutes
+                    return Response({"error": "Please wait 5 minutes before requesting another verification email."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create new verification
+            verification = EmailVerification.objects.create(user=user)
+            
+            # Send verification email
+            email_sent = send_verification_email(user, verification.token)
+            
+            if email_sent:
+                # Update user profile
+                user.profile.email_verification_sent_at = timezone.now()
+                user.profile.save()
+                
+                return Response({
+                    "message": "Verification email sent successfully! Please check your inbox."
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "error": "Failed to send verification email. Please try again later."
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except User.DoesNotExist:
+            return Response({"error": "No user found with this email address."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # api/views.py (add this new class)
 

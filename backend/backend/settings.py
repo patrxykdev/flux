@@ -188,3 +188,8 @@ CORS_ALLOWED_HEADERS = [
 FRONTEND_URL = os.environ.get('FRONTEND_URL')
 if FRONTEND_URL:
     CORS_ALLOWED_ORIGINS.append(FRONTEND_URL)
+
+# Email Configuration
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
+if not RESEND_API_KEY:
+    raise ValueError("RESEND_API_KEY environment variable is required for email functionality")
