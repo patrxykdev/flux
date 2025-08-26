@@ -4,10 +4,10 @@ import { navigateToHome } from './utils/navigation';
 
 // Automatically detect environment and set appropriate API URL
 const getApiUrl = () => {
-  // If we're in production (deployed to Vercel), use the Render backend
+  // If we're in production (deployed to Hetzner), use the Hetzner backend
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    // Replace this with your actual Render backend URL
-    return 'https://flux-r8q4.onrender.com';
+    // Use the new Hetzner backend URL with /api path
+    return 'https://fluxtrader.xyz/api';
   }
   // Development environment
   return 'http://localhost:8000';
