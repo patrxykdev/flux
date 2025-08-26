@@ -601,7 +601,7 @@ class PortfolioSimulator:
                         if self.position_type == 'LONG':
                             price_change = current_price - self.entry_price
                             pnl = price_change * abs(self.position)
-                            current_equity = self.cash + pnl
+                            current_equity = self.cash + self.base_position_value + pnl
                         else:  # SHORT
                             price_change = self.entry_price - current_price
                             pnl = price_change * abs(self.position)
@@ -659,9 +659,15 @@ class PortfolioSimulator:
                         trade_description = f"SHORT: {current_date.strftime('%Y-%m-%d')} at ${current_price:.2f}"
                     
                     # Update cash and position tracking
-                    # We only deduct the base position value from cash (not the leveraged amount)
-                    # The leverage allows us to control more shares with the same cash
-                    self.cash -= base_position_value
+                    if signal == 'LONG':
+                        # For long positions: deduct the base position value from cash
+                        self.cash -= base_position_value
+                    else:  # SHORT
+                        # For short positions: we don't deduct cash (we're borrowing shares)
+                        # The base_position_value represents the value of shares we're borrowing
+                        # We'll need this cash available when we close the position
+                        pass
+                    
                     self.position_value = leveraged_shares_value  # Track the leveraged position value
                     self.base_position_value = base_position_value # Track the base position value
                     
@@ -678,8 +684,13 @@ class PortfolioSimulator:
                     else:  # SHORT
                         self.lowest_price = current_price
                     
-                    # Calculate current portfolio value for display (cash + position value)
-                    current_portfolio_display = self.cash + self.base_position_value
+                    # Calculate current portfolio value for display
+                    if trade_type == 'SHORT':
+                        # For short positions, portfolio value is just the cash (we're borrowing shares, not investing cash)
+                        current_portfolio_display = self.cash
+                    else:
+                        # For long positions, portfolio includes the invested cash
+                        current_portfolio_display = self.cash + self.base_position_value
                     
                     self.trades.append({
                         'Date': current_date.strftime('%Y-%m-%d %H:%M'), 
@@ -736,12 +747,20 @@ class PortfolioSimulator:
                         self.cash += self.base_position_value + pnl_amount
                         print(f"DEBUG: Exit LONG - Old Cash: ${old_cash:,.2f}, Base Position Returned: ${self.base_position_value:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
                     else:  # SHORT
-                        # For short positions: we originally received base_position_value in cash when selling
-                        # Now we pay base_position_value to buy back, plus/minus P&L
-                        # So net effect is just the P&L
+                        # For short positions: we borrowed shares worth base_position_value
+                        # When we close, we need to buy back those shares at current price
+                        # The cost to buy back is: base_position_value + P&L (if P&L is negative)
+                        # If P&L is positive, we pay less than base_position_value
                         old_cash = self.cash
-                        self.cash += pnl_amount
-                        print(f"DEBUG: Exit SHORT - Old Cash: ${old_cash:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
+                        # We need to pay the cost of buying back the shares
+                        # Cost = current_price * shares = current_price * (base_position_value / entry_price)
+                        # But since we're using leverage, we need to calculate the actual cost
+                        actual_shares = abs(self.position)
+                        buyback_cost = actual_shares * current_price
+                        # Net effect: we pay the buyback cost, and our cash changes by: -buyback_cost + base_position_value
+                        # This simplifies to: base_position_value - buyback_cost = P&L
+                        self.cash = self.cash + self.base_position_value - buyback_cost
+                        print(f"DEBUG: Exit SHORT - Old Cash: ${old_cash:,.2f}, Base Position: ${self.base_position_value:,.2f}, Buyback Cost: ${buyback_cost:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
                     
                     # Reset position tracking
                     self.position = 0
@@ -752,11 +771,19 @@ class PortfolioSimulator:
                     self.entry_price = None
                     self.entry_date = None
                     
+                    # Calculate portfolio value for exit trades
+                    if trade_type == 'EXIT SHORT':
+                        # For short exits, portfolio value is just the cash (since we were borrowing shares)
+                        exit_portfolio_display = self.cash
+                    else:
+                        # For long exits, portfolio includes the returned cash
+                        exit_portfolio_display = self.cash
+                    
                     self.trades.append({
                         'Date': current_date.strftime('%Y-%m-%d %H:%M'), 
                         'Type': trade_type, 
                         'Price': f"{current_price:.2f}", 
-                        'Portfolio': f"${self.cash:,.2f}",
+                        'Portfolio': f"${exit_portfolio_display:,.2f}",
                         'P&L': pnl_display,
                         'Leverage': f"{self.leverage}x",
                         'Position Size': '—',
@@ -774,12 +801,13 @@ class PortfolioSimulator:
                         current_equity = self.cash + self.base_position_value + unrealized_pnl
                         print(f"DEBUG: Equity LONG - Cash: ${self.cash:,.2f}, Base Position: ${self.base_position_value:,.2f}, Unrealized P&L: ${unrealized_pnl:,.2f}, Total Equity: ${current_equity:,.2f}")
                     else:  # SHORT
-                        # For short positions: cash + base_position_value + unrealized P&L
-                        # For shorts, base_position_value represents the cash we received from selling
+                        # For short positions: cash + unrealized P&L
+                        # For shorts, we don't have base_position_value in cash (we borrowed shares)
+                        # The unrealized P&L represents our potential profit/loss
                         price_change = self.entry_price - current_price
                         unrealized_pnl = price_change * abs(self.position)
-                        current_equity = self.cash + self.base_position_value + unrealized_pnl
-                        print(f"DEBUG: Equity SHORT - Cash: ${self.cash:,.2f}, Base Position: ${self.base_position_value:,.2f}, Unrealized P&L: ${unrealized_pnl:,.2f}, Total Equity: ${current_equity:,.2f}")
+                        current_equity = self.cash + unrealized_pnl
+                        print(f"DEBUG: Equity SHORT - Cash: ${self.cash:,.2f}, Unrealized P&L: ${unrealized_pnl:,.2f}, Total Equity: ${current_equity:,.2f}")
                 else:
                     # When not in position, equity is just the cash
                     current_equity = self.cash
@@ -818,10 +846,12 @@ class PortfolioSimulator:
                             self.cash += self.base_position_value + pnl_amount
                             print(f"DEBUG: Margin Call LONG - Old Cash: ${old_cash:,.2f}, Base Position Returned: ${self.base_position_value:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
                         else:  # SHORT
-                            # For short: net effect is just P&L
+                            # For short margin calls: same logic as normal exit
                             old_cash = self.cash
-                            self.cash += pnl_amount
-                            print(f"DEBUG: Margin Call SHORT - Old Cash: ${old_cash:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
+                            actual_shares = abs(self.position)
+                            buyback_cost = actual_shares * current_price
+                            self.cash = self.cash + self.base_position_value - buyback_cost
+                            print(f"DEBUG: Margin Call SHORT - Old Cash: ${old_cash:,.2f}, Base Position: ${self.base_position_value:,.2f}, Buyback Cost: ${buyback_cost:,.2f}, P&L: ${pnl_amount:,.2f}, New Cash: ${self.cash:,.2f}")
                         
                         # Reset position
                         self.position = 0
@@ -832,11 +862,19 @@ class PortfolioSimulator:
                         self.entry_price = None
                         self.entry_date = None
                         
+                        # Calculate portfolio value for margin call trades
+                        if trade_type == 'MARGIN CALL SHORT':
+                            # For short margin calls, portfolio value is just the cash
+                            margin_call_portfolio_display = self.cash
+                        else:
+                            # For long margin calls, portfolio includes the returned cash
+                            margin_call_portfolio_display = self.cash
+                        
                         self.trades.append({
                             'Date': current_date.strftime('%Y-%m-%d %H:%M'), 
                             'Type': trade_type, 
                             'Price': f"{current_price:.2f}", 
-                            'Portfolio': f"${self.cash:,.2f}",
+                            'Portfolio': f"${margin_call_portfolio_display:,.2f}",
                             'P&L': pnl_display,
                             'Leverage': f"{self.leverage}x",
                             'Position Size': '—',

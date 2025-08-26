@@ -1,5 +1,5 @@
 // frontend/src/components/RegisterForm.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { AxiosError } from 'axios';
 import GoogleOAuth from './GoogleOAuth';
@@ -16,6 +16,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onClose, onSwitchToLogin })
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [emailVerificationSent, setEmailVerificationSent] = useState(false);
+  const [selectedTier, setSelectedTier] = useState('free');
+
+  // Get the selected tier from localStorage when component mounts
+  useEffect(() => {
+    const tier = localStorage.getItem('selectedTier') || 'free';
+    setSelectedTier(tier);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -24,7 +31,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onClose, onSwitchToLogin })
     setIsLoading(true);
 
     try {
-      const response = await api.post('/api/register/', formData);
+      // Include tier information in the registration data
+      const registrationData = {
+        ...formData,
+        tier: selectedTier
+      };
+      
+      const response = await api.post('/api/register/', registrationData);
       
       if (response.data.email_verification_sent) {
         setIsSuccess(true);
@@ -134,6 +147,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onClose, onSwitchToLogin })
       
       <h2>Create Your Account</h2>
       <p className="auth-subtitle">Join thousands of traders using Flux Trader</p>
+      
+      {selectedTier !== 'free' && (
+        <div className="selected-tier-info">
+          <p>Selected Plan: <strong>{selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)}</strong></p>
+        </div>
+      )}
       
       <GoogleOAuth 
         onSuccess={handleGoogleSuccess}

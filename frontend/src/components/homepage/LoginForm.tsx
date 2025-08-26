@@ -1,7 +1,8 @@
 // frontend/src/components/LoginForm.tsx
 import React, { useState } from 'react';
-import api from '../../api';
 import { AxiosError } from 'axios';
+import api from '../../api';
+import { useAuth } from '../../contexts/AuthContext';
 import GoogleOAuth from './GoogleOAuth';
 import './AuthForm.css';
 
@@ -14,6 +15,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose, onSwitchToRegister }) =>
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -23,10 +25,17 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose, onSwitchToRegister }) =>
     try {
       // The login endpoint is /api/token/
       const response = await api.post('/api/token/', formData);
-      localStorage.setItem('accessToken', response.data.access);
-      localStorage.setItem('refreshToken', response.data.refresh);
-      // Login was successful, so we reload the page to show the Profile view
-      window.location.reload();
+      
+      // Fetch user profile data
+      const profileResponse = await api.get('/api/profile/', {
+        headers: { Authorization: `Bearer ${response.data.access}` }
+      });
+      
+      // Login with token and user data
+      login(response.data.access, profileResponse.data);
+      
+      // Redirect to dashboard
+      window.location.href = '/dashboard';
     } catch (error) {
       const err = error as AxiosError<{ detail?: string }>;
       // Handle common authentication errors from the backend

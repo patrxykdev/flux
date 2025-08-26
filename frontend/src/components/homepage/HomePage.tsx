@@ -39,21 +39,21 @@ const pricingPlans = [
     planName: "Free",
     price: "£0",
     description: "Perfect for getting started and exploring the platform.",
-    features: ["Limited Indicators", "Basic back testing timeframes: 1H/4H/1D only", "3 Backtests a day", "Limited to top 10 assets (BTC, ETH, etc.)"],
+    features: ["1 Strategy", "3 Backtests a day", "Basic Indicators", "4h & 1d timeframes only", "EURUSD & AAPL only"],
     recommended: false,
   },
   {
-    planName: "Advanced",
-    price: "£29.99",
-    description: "For the serious trader ready to deploy multiple strategies.",
-    features: ["Access to Unlimited Indicators", "Backtesting for all time frames", "100+ Assets including crypto"],
+    planName: "Pro",
+    price: "£19.99",
+    description: "For active traders who need more strategies and backtests.",
+    features: ["5 Strategies", "50 Backtests a day", "Advanced Indicators", "15m+ timeframes", "All tickers"],
     recommended: true,
   },
   {
-    planName: "Professional",
-    price: "£44.99",
-    description: "Unlock the full power of FluxTrader with unlimited potential.",
-    features: ["Unlimited Strategies", "High-Frequency Backtesting", "Priority Support", "API Access"],
+    planName: "Premium",
+    price: "£29.99",
+    description: "For serious traders who need maximum flexibility.",
+    features: ["10 Strategies", "100 Backtests a day", "Premium Indicators", "1m+ timeframes", "All tickers", "Priority Support"],
     recommended: false,
   }
 ];
@@ -268,7 +268,11 @@ const HomePage: React.FC = () => {
                   <li key={i}>{feature}</li>
                 ))}
               </ul>
-              <button className="plan-button" onClick={() => setIsRegisterModalOpen(true)}>
+              <button className="plan-button" onClick={() => {
+                setIsRegisterModalOpen(true);
+                // Store the selected tier in localStorage for the registration form
+                localStorage.setItem('selectedTier', plan.planName.toLowerCase());
+              }}>
                 Get Started
               </button>
             </div>

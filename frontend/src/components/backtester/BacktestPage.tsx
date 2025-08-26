@@ -39,6 +39,9 @@ const BacktestPage: React.FC = () => {
   const [results, setResults] = useState<BacktestResults | null>(null);
   const [error, setError] = useState('');
   const [showRecentBacktests, setShowRecentBacktests] = useState(false);
+  const [userTimeframes, setUserTimeframes] = useState<string[]>(['4h', '1d']); // Default to free tier
+  const [userTier, setUserTier] = useState<string>('free');
+  const [userTickers, setUserTickers] = useState<string[]>(['EURUSD', 'AAPL']); // Default to free tier
 
   // Helper to parse and format dates for backend
   const parseDate = (date: string | Date) => {
@@ -61,6 +64,42 @@ const BacktestPage: React.FC = () => {
       setError('Could not load strategies.');
     });
   }, []);
+
+  // Fetch user timeframes based on tier
+  useEffect(() => {
+    const fetchUserPermissions = async () => {
+      try {
+        // Fetch user timeframes
+        const timeframesResponse = await api.get('/api/user-timeframes/');
+        const { tier: timeframeTier, allowed_timeframes } = timeframesResponse.data;
+        
+        // Fetch user tickers
+        const tickersResponse = await api.get('/api/user-tickers/');
+        const { allowed_tickers } = tickersResponse.data;
+        
+        // Both should have the same tier
+        const userTier = timeframeTier;
+        setUserTier(userTier);
+        setUserTimeframes(allowed_timeframes);
+        setUserTickers(allowed_tickers);
+        
+        // Update timeframe if current selection is not allowed
+        if (!allowed_timeframes.includes(timeframe)) {
+          setTimeframe(allowed_timeframes[0] || '1d');
+        }
+        
+        // Update ticker if current selection is not allowed
+        if (allowed_tickers && !allowed_tickers.includes(ticker)) {
+          setTicker(allowed_tickers[0] || 'EURUSD');
+        }
+      } catch (err) {
+        console.error('Error fetching user permissions:', err);
+        // Keep default permissions on error
+      }
+    };
+
+    fetchUserPermissions();
+  }, [timeframe, ticker]);
 
   const handleRunBacktest = async () => {
     if (!selectedStrategy) {
@@ -238,27 +277,52 @@ const BacktestPage: React.FC = () => {
                   </div>
                   
                   <div className="form-group">
-                    <label htmlFor="ticker-select">Ticker</label>
+                    <label htmlFor="ticker-select">
+                      Ticker 
+                      <span className="tier-indicator">({userTier.charAt(0).toUpperCase() + userTier.slice(1)} Tier)</span>
+                    </label>
                     <TickerSelector 
                       value={ticker} 
                       onChange={setTicker}
                       placeholder="Search tickers..."
+                      userTickers={userTickers}
                     />
+                    {userTier === 'free' && (
+                      <div className="tier-upgrade-hint">
+                        💡 Free tier limited to EURUSD and AAPL. Upgrade to Pro or Premium for access to all tickers
+                      </div>
+                    )}
                   </div>
                   
                   <div className="form-group">
-                    <label htmlFor="timeframe-select">Timeframe</label>
+                    <label htmlFor="timeframe-select">
+                      Timeframe 
+                      <span className="tier-indicator">({userTier.charAt(0).toUpperCase() + userTier.slice(1)} Tier)</span>
+                    </label>
                     <select 
                       id="timeframe-select"
                       value={timeframe} 
                       onChange={(e) => setTimeframe(e.target.value)}
                       className="form-select"
                     >
-                      <option value="5m">5 Minute</option>
-                      <option value="15m">15 Minute</option>
-                      <option value="1h">1 Hour</option>
-                      <option value="1d">1 Day</option>
+                      {userTimeframes.includes('1m') && <option value="1m">1 Minute</option>}
+                      {userTimeframes.includes('5m') && <option value="5m">5 Minute</option>}
+                      {userTimeframes.includes('15m') && <option value="15m">15 Minute</option>}
+                      {userTimeframes.includes('30m') && <option value="30m">30 Minute</option>}
+                      {userTimeframes.includes('1h') && <option value="1h">1 Hour</option>}
+                      {userTimeframes.includes('4h') && <option value="4h">4 Hour</option>}
+                      {userTimeframes.includes('1d') && <option value="1d">1 Day</option>}
                     </select>
+                    {userTier === 'free' && (
+                      <div className="tier-upgrade-hint">
+                        💡 Upgrade to Pro for access to 15m+ timeframes, or Premium for 1m+ timeframes
+                      </div>
+                    )}
+                    {userTier === 'pro' && (
+                      <div className="tier-upgrade-hint">
+                        💡 Upgrade to Premium for access to 1m and 5m timeframes
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

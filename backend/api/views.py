@@ -1,11 +1,11 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, serializers
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics
@@ -56,6 +56,12 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+
+        # Set tier based on request data (default to 'free' if not specified)
+        tier = request.data.get('tier', 'free')
+        if tier in ['free', 'pro', 'premium']:
+            user.profile.tier = tier
+            user.profile.save()
 
         # Create email verification
         verification = EmailVerification.objects.create(user=user)
@@ -174,6 +180,57 @@ class ProfileView(APIView):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
     
+    def put(self, request):
+        """Update user profile information"""
+        user = request.user
+        data = request.data
+        
+        try:
+            # Update basic user fields
+            if 'username' in data and data['username'] != user.username:
+                # Check if username is already taken
+                if User.objects.filter(username=data['username']).exclude(id=user.id).exists():
+                    return Response({"error": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+                user.username = data['username']
+            if 'first_name' in data:
+                user.first_name = data['first_name']
+            if 'last_name' in data:
+                user.last_name = data['last_name']
+            if 'email' in data and data['email'] != user.email:
+                # Check if email is already taken
+                if User.objects.filter(email=data['email']).exclude(id=user.id).exists():
+                    return Response({"error": "Email is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+                user.email = data['email']
+                # Reset email verification status
+                user.profile.email_verified = False
+                user.profile.save()
+            
+            # Update password if provided
+            if 'password' in data and data['password']:
+                user.set_password(data['password'])
+            
+            # Update tier if provided
+            if 'tier' in data and data['tier'] in ['free', 'pro', 'premium']:
+                user.profile.tier = data['tier']
+                user.profile.save()
+            
+            user.save()
+            
+            # Update profile picture if provided
+            if 'profile_picture' in data:
+                # Handle profile picture update logic here
+                # For now, we'll just acknowledge it
+                pass
+            
+            serializer = UserSerializer(user)
+            return Response({
+                "message": "Profile updated successfully!",
+                "user": serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({"error": f"Failed to update profile: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class StrategyViewSet(viewsets.ModelViewSet):
     """
@@ -259,6 +316,25 @@ class BacktestView(APIView):
                 
                 if len(data) < 30:  # Need at least 30 data points for indicators
                     return Response({"error": f"Insufficient data for {ticker}. Need at least 30 data points, got {len(data)}."}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Check if the requested timeframe is allowed for the user's tier
+                user_tier = request.user.profile.tier
+                allowed_timeframes = request.user.profile.get_allowed_timeframes()
+                if timeframe not in allowed_timeframes:
+                    return Response({
+                        "error": f"Timeframe '{timeframe}' is not available for your current tier '{user_tier}'. "
+                                f"Your tier allows: {', '.join(allowed_timeframes)}. "
+                                f"Please upgrade your plan to access more timeframes."
+                    }, status=status.HTTP_403_FORBIDDEN)
+                
+                # Check if the requested ticker is allowed for the user's tier
+                allowed_tickers = request.user.profile.get_allowed_tickers()
+                if allowed_tickers is not None and ticker not in allowed_tickers:
+                    return Response({
+                        "error": f"Ticker '{ticker}' is not available for your current tier '{user_tier}'. "
+                                f"Your tier allows: {', '.join(allowed_tickers)}. "
+                                f"Please upgrade your plan to access more tickers."
+                    }, status=status.HTTP_403_FORBIDDEN)
                 
                 # Check if the requested date range matches the available data range
                 requested_start = pd.to_datetime(start_date)
@@ -368,6 +444,25 @@ class BacktestView(APIView):
                 
                 # Save backtest results to database
                 try:
+                    # Increment total backtests counter first
+                    # Check daily backtest limit based on user tier
+                    today = timezone.now().date()
+                    today_backtests = Backtest.objects.filter(
+                        user=request.user,
+                        created_at__date=today
+                    ).count()
+                    
+                    daily_limit = request.user.profile.get_daily_backtest_limit()
+                    if today_backtests >= daily_limit:
+                        return Response({
+                            "error": f"You have reached your daily backtest limit of {daily_limit} for your {request.user.profile.tier.title()} tier. "
+                            f"Please upgrade your plan or try again tomorrow."
+                        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+                    
+                    user_profile = request.user.profile
+                    user_profile.total_backtests += 1
+                    user_profile.save()
+                    
                     # Delete oldest backtests if user has more than 10
                     user_backtests = Backtest.objects.filter(user=request.user)
                     if user_backtests.count() >= 10:
@@ -428,11 +523,179 @@ class AvailableDataView(APIView):
                 timeframes = get_available_timeframes(ticker)
                 ticker_data[ticker] = timeframes
             
+            # If user is authenticated, filter timeframes based on tier
+            if request.user.is_authenticated:
+                user_tier = request.user.profile.tier
+                allowed_timeframes = request.user.profile.get_allowed_timeframes()
+                allowed_tickers = request.user.profile.get_allowed_tickers()
+                
+                # Filter timeframes for each ticker based on user tier
+                for ticker in ticker_data:
+                    ticker_data[ticker] = [tf for tf in ticker_data[ticker] if tf in allowed_timeframes]
+                
+                # Filter tickers based on user tier
+                if allowed_tickers is not None:  # None means all tickers allowed
+                    tickers = [ticker for ticker in tickers if ticker in allowed_tickers]
+                    # Also filter the ticker_data to only include allowed tickers
+                    ticker_data = {ticker: timeframes for ticker, timeframes in ticker_data.items() if ticker in allowed_tickers}
+            
             return Response({
                 'tickers': tickers,
                 'ticker_data': ticker_data
             }, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Error fetching available data: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserTimeframesView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get allowed timeframes for the authenticated user based on their tier"""
+        try:
+            user_tier = request.user.profile.tier
+            allowed_timeframes = request.user.profile.get_allowed_timeframes()
+            
+            return Response({
+                'tier': user_tier,
+                'allowed_timeframes': allowed_timeframes
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": f"Error fetching user timeframes: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserTickersView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get allowed tickers for the authenticated user based on their tier"""
+        try:
+            user_tier = request.user.profile.tier
+            allowed_tickers = request.user.profile.get_allowed_tickers()
+            
+            return Response({
+                'tier': user_tier,
+                'allowed_tickers': allowed_tickers
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": f"Error fetching user tickers: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DashboardStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get comprehensive dashboard statistics for the authenticated user"""
+        try:
+            user = request.user
+            
+            # Get user's backtests
+            backtests = Backtest.objects.filter(user=user)
+            
+            if not backtests.exists():
+                return Response({
+                    'portfolio_summary': {
+                        'total_backtests': 0,
+                        'total_strategies': 0,
+                        'best_win_rate': 0,
+                        'best_strategy_return': 0,
+                        'total_pnl': 0
+                    },
+                    'top_strategies': [],
+                    'recent_backtests': []
+                }, status=status.HTTP_200_OK)
+            
+            # Calculate portfolio summary
+            total_backtests = user.profile.total_backtests  # Use the total counter instead of stored count
+            total_strategies = Strategy.objects.filter(user=user).count()
+            
+            # Calculate total P&L and find best strategy return
+            total_pnl = 0
+            best_strategy_return = 0
+            
+            for backtest in backtests:
+                if backtest.results and 'stats' in backtest.results:
+                    stats = backtest.results['stats']
+                    if 'Return [%]' in stats:
+                        return_pct = float(stats['Return [%]'])
+                        total_pnl += return_pct
+                        if return_pct > best_strategy_return:
+                            best_strategy_return = return_pct
+            
+            # Get top performing strategies
+            strategy_performance = {}
+            for backtest in backtests:
+                strategy_name = backtest.strategy_name
+                if strategy_name not in strategy_performance:
+                    strategy_performance[strategy_name] = {
+                        'name': strategy_name,
+                        'total_return': 0,
+                        'backtest_count': 0,
+                        'win_count': 0,
+                        'avg_return': 0
+                    }
+                
+                if backtest.results and 'stats' in backtest.results:
+                    stats = backtest.results['stats']
+                    if 'Return [%]' in stats:
+                        return_pct = float(stats['Return [%]'])
+                        strategy_performance[strategy_name]['total_return'] += return_pct
+                        strategy_performance[strategy_name]['backtest_count'] += 1
+                        if return_pct > 0:
+                            strategy_performance[strategy_name]['win_count'] += 1
+            
+            # Calculate averages and find best win rate
+            best_win_rate = 0
+            for strategy in strategy_performance.values():
+                if strategy['backtest_count'] > 0:
+                    strategy['avg_return'] = strategy['total_return'] / strategy['backtest_count']
+                    strategy['win_rate'] = (strategy['win_count'] / strategy['backtest_count']) * 100
+                    if strategy['win_rate'] > best_win_rate:
+                        best_win_rate = strategy['win_rate']
+            
+            # Ensure best_win_rate is always a valid number
+            if not isinstance(best_win_rate, (int, float)) or best_win_rate < 0:
+                best_win_rate = 0
+            
+            # Get top 3 strategies by total return
+            top_strategies = sorted(
+                strategy_performance.values(), 
+                key=lambda x: x['total_return'], 
+                reverse=True
+            )[:3]
+            
+            # Get 3 most recent backtests for display
+            recent_backtests_data = []
+            for backtest in backtests.order_by('-created_at')[:3]:
+                if backtest.results and 'stats' in backtest.results:
+                    stats = backtest.results['stats']
+                    
+                    recent_backtests_data.append({
+                        'id': backtest.id,
+                        'strategy_name': backtest.strategy_name,
+                        'ticker': backtest.ticker,
+                        'return_pct': stats.get('Return [%]', 'N/A'),
+                        'final_equity': stats.get('Equity Final [$]', 'N/A'),
+                        'trade_count': stats.get('# Trades', 0),
+                        'created_at': backtest.created_at,
+                        'timeframe': backtest.timeframe,
+                        'leverage': backtest.leverage,
+                        'results': backtest.results  # Include full results for chart
+                    })
+            
+            return Response({
+                'portfolio_summary': {
+                    'total_backtests': total_backtests,
+                    'total_strategies': total_strategies,
+                    'best_win_rate': round(best_win_rate, 1),
+                    'best_strategy_return': round(best_strategy_return, 2),
+                    'total_pnl': round(total_pnl, 2)
+                },
+                'top_strategies': top_strategies,
+                'recent_backtests': recent_backtests_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({"error": f"Error fetching dashboard stats: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

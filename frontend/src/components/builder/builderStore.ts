@@ -108,9 +108,47 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       entryCondition,
       exitCondition 
     };
-    const response = await api.post('/api/strategies/', { name: trimmedName, configuration: strategyConfiguration });
-    fetchSavedStrategies();
-    return response;
+    
+    try {
+      const response = await api.post('/api/strategies/', { name: trimmedName, configuration: strategyConfiguration });
+      fetchSavedStrategies();
+      return response;
+    } catch (error: any) {
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        // Check if it's a strategy limit error
+        const errorData = error.response.data;
+        if (errorData && typeof errorData === 'object') {
+          // If it's a non-field error (like strategy limit), use that message
+          if (errorData.non_field_errors && errorData.non_field_errors.length > 0) {
+            throw new Error(errorData.non_field_errors[0]);
+          }
+          // If it's a general error message
+          if (errorData.detail) {
+            throw new Error(errorData.detail);
+          }
+          // If it's a validation error with a specific message
+          if (errorData.error) {
+            throw new Error(errorData.error);
+          }
+          // Check if the error message contains strategy limit information
+          if (errorData.name && Array.isArray(errorData.name)) {
+            const nameError = errorData.name[0];
+            if (nameError && typeof nameError === 'string' && nameError.includes('strategy limit')) {
+              throw new Error(nameError);
+            }
+          }
+        }
+      }
+      // For other errors, create a user-friendly error message
+      if (error.response?.status) {
+        throw new Error(`Request failed with status ${error.response.status}. Please try again.`);
+      } else if (error.message) {
+        throw new Error(error.message);
+      } else {
+        throw new Error('An unexpected error occurred. Please try again.');
+      }
+    }
   },
 
   fetchSavedStrategies: async () => {

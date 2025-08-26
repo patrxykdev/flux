@@ -7,6 +7,7 @@ import DashboardLayout from './components/common/DashboardLayout';
 import EmailVerification from './components/homepage/EmailVerification';
 import './App.css'; 
 import BacktestPage from './components/backtester/BacktestPage';
+import HelpPage from './components/help/HelpPage';
 import type { JSX } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -33,13 +34,6 @@ const AnalyticsPage = () => (
   <div style={{ padding: '2rem', textAlign: 'center' }}>
     <h1>Analytics</h1>
     <p>Analytics page coming soon...</p>
-  </div>
-);
-
-const SettingsPage = () => (
-  <div style={{ padding: '2rem', textAlign: 'center' }}>
-    <h1>Settings</h1>
-    <p>Settings page coming soon...</p>
   </div>
 );
 
@@ -107,12 +101,16 @@ function AppContent() {
         >
           <Route index element={<AnalyticsPage />} />
         </Route>
-        
-        {/* Settings page - No sidebar */}
         <Route 
-          path="/settings" 
-          element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} 
-        />
+          path="/help" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          } 
+        >
+          <Route index element={<HelpPage />} />
+        </Route>
       </Routes>
       <Toaster
         position="bottom-right"

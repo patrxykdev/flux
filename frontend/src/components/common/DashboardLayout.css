@@ -103,6 +103,13 @@
   border-radius: 12px;
   transition: all 0.2s ease;
   font-weight: 500;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  width: 100%;
+  text-align: left;
 }
 
 .nav-link:hover {
@@ -339,8 +346,12 @@
   }
 }
 
-/* Smooth transitions for all interactive elements */
-* {
+/* Smooth transitions for interactive elements only */
+.dashboard-sidebar,
+.nav-link,
+.sidebar-toggle,
+.logout-btn,
+.mobile-menu-toggle {
   transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 

@@ -1,11 +1,32 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profile: {
+    email_verified: boolean;
+    email_verification_sent_at: string | null;
+    tier: string;
+    strategy_limit: number;
+    daily_backtest_limit: number;
+  };
+  email_verified: boolean;
+  tier: string;
+  strategy_limit: number;
+  daily_backtest_limit: number;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   token: string | null;
-  login: (token: string) => void;
+  user: User | null;
+  login: (token: string, userData?: User) => void;
   logout: () => void;
+  updateUser: (userData: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,18 +47,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem('accessToken');
   });
+  
+  const [user, setUser] = useState<User | null>(() => {
+    const userData = localStorage.getItem('userData');
+    return userData ? JSON.parse(userData) : null;
+  });
 
   const isAuthenticated = !!token;
 
-  const login = (newToken: string) => {
+  const login = (newToken: string, userData?: User) => {
     localStorage.setItem('accessToken', newToken);
     setToken(newToken);
+    
+    if (userData) {
+      localStorage.setItem('userData', JSON.stringify(userData));
+      setUser(userData);
+    }
   };
 
   const logout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userData');
     setToken(null);
+    setUser(null);
+  };
+
+  const updateUser = (userData: User) => {
+    localStorage.setItem('userData', JSON.stringify(userData));
+    setUser(userData);
   };
 
   // Listen for storage changes (in case tokens are cleared from other tabs/windows)
@@ -45,6 +83,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'accessToken') {
         setToken(e.newValue);
+      }
+      if (e.key === 'userData') {
+        setUser(e.newValue ? JSON.parse(e.newValue) : null);
       }
     };
 
@@ -55,8 +96,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     isAuthenticated,
     token,
+    user,
     login,
     logout,
+    updateUser,
   };
 
   return (

@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import RegisterView, ProfileView, StrategyViewSet, BacktestView, RecentBacktestsView, AvailableDataView, VerifyEmailView, ResendVerificationEmailView
+from .views import RegisterView, ProfileView, StrategyViewSet, BacktestView, RecentBacktestsView, AvailableDataView, VerifyEmailView, ResendVerificationEmailView, DashboardStatsView, UserTimeframesView, UserTickersView
 
 # Create a router and register our viewsets with it.
 router = DefaultRouter()
@@ -17,6 +17,9 @@ urlpatterns = [
     path('backtest/', BacktestView.as_view(), name='backtest'),
     path('recent-backtests/', RecentBacktestsView.as_view(), name='recent-backtests'),
     path('available-data/', AvailableDataView.as_view(), name='available-data'),
+    path('user-timeframes/', UserTimeframesView.as_view(), name='user-timeframes'),
+    path('user-tickers/', UserTickersView.as_view(), name='user-tickers'),
+    path('dashboard-stats/', DashboardStatsView.as_view(), name='dashboard-stats'),
     
     # Email verification endpoints
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),

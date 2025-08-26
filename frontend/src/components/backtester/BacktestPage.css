@@ -1009,3 +1009,30 @@
     padding: 1rem;
   }
 }
+
+/* Tier indicator and upgrade hints */
+.tier-indicator {
+  font-size: 0.8rem;
+  color: var(--primary-blue);
+  font-weight: 500;
+  margin-left: 0.5rem;
+  background: rgba(13, 110, 253, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.tier-upgrade-hint {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid var(--primary-blue);
+  line-height: 1.4;
+}
+
+.tier-upgrade-hint:before {
+  content: "💡 ";
+  margin-right: 0.25rem;
+}

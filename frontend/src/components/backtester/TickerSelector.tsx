@@ -7,6 +7,7 @@ interface TickerSelectorProps {
   value: string;
   onChange: (ticker: string) => void;
   placeholder?: string;
+  userTickers?: string[]; // Add prop for user's allowed tickers
 }
 
 interface AvailableData {
@@ -23,7 +24,8 @@ interface CategorizedTickers {
 const TickerSelector: React.FC<TickerSelectorProps> = ({ 
   value, 
   onChange, 
-  placeholder = "Search tickers..." 
+  placeholder = "Search tickers...",
+  userTickers
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,10 +75,34 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
     return categorized;
   };
 
-  // Filter tickers based on search
-  const filteredTickers = availableData?.tickers.filter(ticker => 
-    ticker.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  // Get categorized tickers respecting user permissions
+  const getCategorizedTickers = () => {
+    let availableTickers = availableData?.tickers || [];
+    
+    // Apply user ticker restrictions if provided
+    if (userTickers) {
+      availableTickers = availableTickers.filter(ticker => userTickers.includes(ticker));
+    }
+    
+    return categorizeTickers(availableTickers);
+  };
+
+  // Filter tickers based on search and user permissions
+  const getFilteredTickers = () => {
+    let availableTickers = availableData?.tickers || [];
+    
+    // Apply user ticker restrictions if provided
+    if (userTickers) {
+      availableTickers = availableTickers.filter(ticker => userTickers.includes(ticker));
+    }
+    
+    // Apply search filter
+    return availableTickers.filter(ticker => 
+      ticker.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
+  const filteredTickers = getFilteredTickers();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -153,7 +179,7 @@ const TickerSelector: React.FC<TickerSelectorProps> = ({
     );
   }
 
-  const categorizedTickers = categorizeTickers(availableData?.tickers || []);
+  const categorizedTickers = getCategorizedTickers();
 
   return (
     <div className="ticker-selector" ref={dropdownRef}>

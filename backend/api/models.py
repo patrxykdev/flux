@@ -7,12 +7,56 @@ from datetime import timedelta
 from django.utils import timezone
 
 class UserProfile(models.Model):
+    TIER_CHOICES = [
+        ('free', 'Free'),
+        ('pro', 'Pro'),
+        ('premium', 'Premium'),
+    ]
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     email_verified = models.BooleanField(default=False)
     email_verification_sent_at = models.DateTimeField(null=True, blank=True)
+    total_backtests = models.IntegerField(default=0)  # Track total backtests performed
+    tier = models.CharField(max_length=10, choices=TIER_CHOICES, default='free')
     
     def __str__(self):
         return f"{self.user.username}'s profile"
+    
+    def get_strategy_limit(self):
+        """Get the maximum number of strategies allowed for this tier"""
+        limits = {
+            'free': 1,
+            'pro': 5,
+            'premium': 10,
+        }
+        return limits.get(self.tier, 1)
+    
+    def get_daily_backtest_limit(self):
+        """Get the maximum number of backtests allowed per day for this tier"""
+        limits = {
+            'free': 3,
+            'pro': 50,
+            'premium': 100,
+        }
+        return limits.get(self.tier, 3)
+    
+    def get_allowed_timeframes(self):
+        """Get the allowed timeframes for this tier"""
+        limits = {
+            'free': ['4h', '1d'],  # Free tier: only 4h and 1d
+            'pro': ['15m', '30m', '1h', '4h', '1d'],  # Pro tier: 15m and above
+            'premium': ['1m', '5m', '15m', '30m', '1h', '4h', '1d'],  # Premium tier: 1m and above
+        }
+        return limits.get(self.tier, ['4h', '1d'])
+    
+    def get_allowed_tickers(self):
+        """Get the allowed tickers for this tier"""
+        limits = {
+            'free': ['EURUSD', 'AAPL'],  # Free tier: only EURUSD and AAPL
+            'pro': None,  # Pro tier: all tickers
+            'premium': None,  # Premium tier: all tickers
+        }
+        return limits.get(self.tier, ['EURUSD', 'AAPL'])
 
 class EmailVerification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='email_verifications')
