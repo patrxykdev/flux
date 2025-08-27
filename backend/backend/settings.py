@@ -75,11 +75,25 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# Force SSL to be completely disabled
+database_url = os.environ.get('DATABASE_URL', '')
+if database_url:
+    # Remove any SSL parameters and force disable
+    if 'sslmode=' in database_url:
+        database_url = database_url.split('?')[0] + '?sslmode=disable'
+    elif '?' in database_url:
+        database_url += '&sslmode=disable'
+    else:
+        database_url += '?sslmode=disable'
+
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=database_url,
         conn_max_age=600,
-        ssl_require=False  # Dokploy PostgreSQL requires SSL
+        ssl_require=False,  # Force SSL to be disabled
+        options={
+            'sslmode': 'disable',  # Additional SSL disable
+        }
     )
 }
 
