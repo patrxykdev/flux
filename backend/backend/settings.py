@@ -1,5 +1,4 @@
 import os
-import dj_database_url
 from dotenv import load_dotenv
 
 
@@ -79,11 +78,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db',                   # your database name
-        'USER': 'patryk',               # your DB username
-        'PASSWORD': 'patryk',           # your DB password
-        'HOST': '167.235.57.76',        # Dokploy DB host
-        'PORT': '5432',                  # PostgreSQL port
+        'NAME': 'db',
+        'USER': 'patryk',
+        'PASSWORD': 'patryk',
+        'HOST': '167.235.57.76',
+        'PORT': '5432',
     }
 }
 
