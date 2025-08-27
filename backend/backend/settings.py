@@ -121,7 +121,7 @@ DATABASES = {
 }
 
 # Add SSL options directly to the database configuration
-if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+if 'default' in DATABASES and DATABASES['default'] and DATABASES['default'].get('ENGINE') == 'django.db.backends.postgresql':
     DATABASES['default']['OPTIONS'] = {
         'sslmode': 'disable',
         'connect_timeout': 10,
