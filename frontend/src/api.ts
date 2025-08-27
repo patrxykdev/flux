@@ -6,8 +6,8 @@ import { navigateToHome } from './utils/navigation';
 const getApiUrl = () => {
   // If we're in production (deployed to Hetzner), use the Hetzner backend
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    // Use the new Hetzner backend URL with /api path
-    return 'https://fluxtrader.xyz/api';
+    // Use the Hetzner backend URL without /api (since backend handles that path)
+    return 'https://fluxtrader.xyz';
   }
   // Development environment
   return 'http://localhost:8000';
