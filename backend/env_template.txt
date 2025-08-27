@@ -1,0 +1,25 @@
+# Django Backend Environment Variables
+# Copy this file to .env and fill in your actual values
+
+# Django Secret Key (generate a new one for production)
+SECRET_KEY=your-secret-key-here
+
+# Debug mode (set to False in production)
+DEBUG=False
+
+# Database URL from Dokploy (this should include host, port, database name, username, and password)
+# Format: postgresql://username:password@host:port/database_name
+DATABASE_URL=postgresql://username:password@fluxtrader-fluxpostgres-oj0wns:5432/database_name
+
+# Frontend URL for CORS
+FRONTEND_URL=https://fluxtrader.xyz
+
+# Email API Key (for Resend)
+RESEND_API_KEY=your-resend-api-key-here
+
+# Optional: Custom database settings (these will override DATABASE_URL if set)
+# DB_HOST=fluxtrader-fluxpostgres-oj0wns
+# DB_PORT=5432
+# DB_NAME=database_name
+# DB_USER=username
+# DB_PASSWORD=password
