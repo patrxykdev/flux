@@ -75,57 +75,14 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Force SSL to be completely disabled for Dokploy PostgreSQL
-database_url = os.environ.get('DATABASE_URL', '')
-
-# Debug: Print database URL (remove in production)
-if DEBUG:
-    print(f"DEBUG: Original DATABASE_URL: {database_url}")
-
-if database_url:
-    # Remove any existing SSL parameters and force disable
-    if 'sslmode=' in database_url:
-        # Remove existing sslmode parameter
-        base_url = database_url.split('?')[0]
-        params = database_url.split('?')[1] if '?' in database_url else ''
-        if params:
-            # Remove sslmode from existing parameters
-            param_list = [p for p in params.split('&') if not p.startswith('sslmode=')]
-            if param_list:
-                database_url = base_url + '?' + '&'.join(param_list) + '&sslmode=disable'
-            else:
-                database_url = base_url + '?sslmode=disable'
-        else:
-            database_url = base_url + '?sslmode=disable'
-    elif '?' in database_url:
-        database_url += '&sslmode=disable'
-    else:
-        database_url += '?sslmode=disable'
-
-    # Debug: Print modified database URL (remove in production)
-    if DEBUG:
-        print(f"DEBUG: Modified DATABASE_URL: {database_url}")
-
-# Ensure SSL is completely disabled
-os.environ.setdefault('PGSSLMODE', 'disable')
-os.environ.setdefault('PGSSLCERT', '')
-os.environ.setdefault('PGSSLKEY', '')
-os.environ.setdefault('PGSSLROOTCERT', '')
-
 DATABASES = {
     'default': dj_database_url.config(
-        default=database_url,
+        default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
-        ssl_require=False,  # Force SSL to be disabled
+        ssl_require=True # Neon requires an SSL connection
     )
 }
 
-# Add SSL options directly to the database configuration
-if 'default' in DATABASES and DATABASES['default'] and DATABASES['default'].get('ENGINE') == 'django.db.backends.postgresql':
-    DATABASES['default']['OPTIONS'] = {
-        'sslmode': 'disable',
-        'connect_timeout': 10,
-    }
 
 
 # Password validation
