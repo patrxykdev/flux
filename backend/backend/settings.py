@@ -21,9 +21,9 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 # Fix ALLOWED_HOSTS - only hostnames, not full URLs
 ALLOWED_HOSTS = [
     "localhost", 
-    "127.0.0.1", 
-    "flux-r8q4.onrender.com",  # Remove https://
-    "fluxtrader.xyz"  # Add your frontend domain
+    "127.0.0.1",   # Remove https://
+    "fluxtrader.xyz",
+    "fluxtrader.xyz/api/"  # Add your frontend domain
 ]
 # Application definition
 
@@ -75,13 +75,39 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=True # Neon requires an SSL connection
-    )
-}
+# Get database URL from environment
+database_url = os.environ.get('DATABASE_URL')
+
+# Configure database with SSL disabled for containerized environments
+if database_url:
+    # Parse the database URL to extract components
+    from urllib.parse import urlparse
+    parsed_url = urlparse(database_url)
+    
+    # Build database configuration manually to ensure SSL is disabled
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': parsed_url.path[1:],  # Remove leading slash
+            'USER': parsed_url.username,
+            'PASSWORD': parsed_url.password,
+            'HOST': parsed_url.hostname,
+            'PORT': parsed_url.port or '5432',
+            'OPTIONS': {
+                'sslmode': 'disable',  # Explicitly disable SSL
+                'ssl': False,
+            },
+            'CONN_MAX_AGE': 600,
+        }
+    }
+else:
+    # Fallback for development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 

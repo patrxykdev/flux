@@ -39,6 +39,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_SETTINGS_MODULE=backend.settings
 ENV PORT=8000
+ENV DJANGO_DB_SSL_MODE=disable
+ENV PGSSLMODE=disable
+ENV PGSSL=0
 
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser
