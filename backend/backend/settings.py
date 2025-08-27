@@ -79,7 +79,7 @@ DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
-        ssl_require=True  # Dokploy PostgreSQL requires SSL
+        ssl_require=False  # Dokploy PostgreSQL requires SSL
     )
 }
 
