@@ -12,6 +12,9 @@ import type { JSX } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
+// Debug message to verify React is loading
+console.log('React App is loading...');
+
 // A helper component to protect routes that require a login
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
