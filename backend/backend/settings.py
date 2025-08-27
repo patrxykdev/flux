@@ -112,22 +112,20 @@ os.environ.setdefault('PGSSLCERT', '')
 os.environ.setdefault('PGSSLKEY', '')
 os.environ.setdefault('PGSSLROOTCERT', '')
 
-# Additional SSL environment variables for psycopg2
-os.environ.setdefault('PGSSLMODE', 'disable')
-
 DATABASES = {
     'default': dj_database_url.config(
         default=database_url,
         conn_max_age=600,
         ssl_require=False,  # Force SSL to be disabled
-        ssl_mode='disable',  # Explicitly set SSL mode to disable
-        options={
-            'sslmode': 'disable',  # Additional SSL mode setting
-            'connect_timeout': 10,  # Connection timeout
-        }
     )
 }
 
+# Add SSL options directly to the database configuration
+if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'disable',
+        'connect_timeout': 10,
+    }
 
 
 # Password validation
