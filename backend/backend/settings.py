@@ -79,7 +79,7 @@ DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
-        ssl_require=True # Neon requires an SSL connection
+        ssl_require=False  # Railway PostgreSQL doesn't support SSL
     )
 }
 
