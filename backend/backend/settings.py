@@ -75,9 +75,16 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# Get the DATABASE_URL and force SSL to be disabled
+database_url = os.environ.get('DATABASE_URL', '')
+if database_url and 'sslmode=require' in database_url:
+    database_url = database_url.replace('sslmode=require', 'sslmode=disable')
+elif database_url and 'sslmode=' not in database_url:
+    database_url += '?sslmode=disable'
+
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=database_url,
         conn_max_age=600,
         ssl_require=False  # Railway PostgreSQL doesn't support SSL
     )
