@@ -75,106 +75,17 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Get database URL from environment
-database_url = os.environ.get('DATABASE_URL')
-
-# Debug: Print the raw DATABASE_URL (remove in production)
-if database_url:
-    print(f"Raw DATABASE_URL: {database_url}")
-    # Mask password for security
-    masked_url = database_url.replace(database_url.split('@')[0].split(':')[-1], '***') if '@' in database_url else database_url
-    print(f"Masked DATABASE_URL: {masked_url}")
-
-# Configure database with SSL disabled for containerized environments
-if database_url:
-    try:
-        # First, try to parse the URL manually to debug
-        from urllib.parse import urlparse
-        parsed_url = urlparse(database_url)
-        print(f"Parsed URL components:")
-        print(f"  Scheme: {parsed_url.scheme}")
-        print(f"  Username: {parsed_url.username}")
-        print(f"  Password: {'***' if parsed_url.password else 'None'}")
-        print(f"  Hostname: {parsed_url.hostname}")
-        print(f"  Port: {parsed_url.port}")
-        print(f"  Path: {parsed_url.path}")
-        
-        # Try dj_database_url first, with fallback to manual parsing
-        try:
-            db_config = dj_database_url.config(
-                default=database_url,
-                conn_max_age=600,
-                ssl_require=False,
-                ssl_mode='disable',
-                # Force SSL to be disabled
-                ssl_cert=None,
-                ssl_key=None,
-                ssl_ca=None,
-                # Additional options to ensure SSL is disabled
-                options={
-                    'sslmode': 'disable',
-                }
-            )
-            
-            # Verify the configuration has the expected keys
-            required_keys = ['ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT']
-            if all(key in db_config for key in required_keys):
-                DATABASES = {'default': db_config}
-                print("Using dj_database_url configuration")
-            else:
-                raise ValueError("Missing required database configuration keys")
-                
-        except Exception as dj_error:
-            print(f"dj_database_url failed: {dj_error}")
-            print("Falling back to manual URL parsing")
-            
-            # Manual fallback parsing
-            if parsed_url.scheme == 'postgresql' or parsed_url.scheme == 'postgres':
-                DATABASES = {
-                    'default': {
-                        'ENGINE': 'django.db.backends.postgresql',
-                        'NAME': parsed_url.path[1:] if parsed_url.path else 'postgres',
-                        'USER': parsed_url.username or 'postgres',
-                        'PASSWORD': parsed_url.password or '',
-                        'HOST': parsed_url.hostname or 'localhost',
-                        'PORT': parsed_url.port or '5432',
-                        'OPTIONS': {
-                            'sslmode': 'disable',
-                        },
-                        'CONN_MAX_AGE': 600,
-                    }
-                }
-                print("Using manual PostgreSQL configuration")
-            else:
-                raise ValueError(f"Unsupported database scheme: {parsed_url.scheme}")
-        
-        # Debug: Print final database configuration (remove in production)
-        print(f"Final database configuration:")
-        for key, value in DATABASES['default'].items():
-            if key == 'PASSWORD':
-                print(f"  {key}: ***")
-            else:
-                print(f"  {key}: {value}")
-        
-    except Exception as e:
-        print(f"Error configuring database: {e}")
-        print(f"Falling back to SQLite")
-        # Fallback to SQLite if there's an error
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
-        }
-else:
-    print("No DATABASE_URL found, using SQLite fallback")
-    # Fallback for development
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+# Database configuration
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'db',                   # your database name
+        'USER': 'patryk',               # your DB username
+        'PASSWORD': 'patryk',           # your DB password
+        'HOST': '167.235.57.76',        # Dokploy DB host
+        'PORT': '5432',                  # PostgreSQL port
     }
+}
 
 
 
