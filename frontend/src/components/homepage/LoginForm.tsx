@@ -23,20 +23,31 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose, onSwitchToRegister }) =>
     setIsLoading(true);
     
     try {
+      console.log('Starting login process...');
+      
       // The login endpoint is /api/token/
       const response = await api.post('/api/token/', formData);
+      console.log('Login successful, token received:', response.data.access ? 'YES' : 'NO');
       
       // Fetch user profile data
+      console.log('Fetching user profile...');
       const profileResponse = await api.get('/api/profile/', {
         headers: { Authorization: `Bearer ${response.data.access}` }
       });
+      console.log('Profile fetched successfully:', profileResponse.data);
       
       // Login with token and user data
+      console.log('Calling login function...');
       login(response.data.access, profileResponse.data);
+      console.log('Login function completed, checking localStorage...');
+      console.log('Token in localStorage:', localStorage.getItem('accessToken') ? 'YES' : 'NO');
+      console.log('User data in localStorage:', localStorage.getItem('userData') ? 'YES' : 'NO');
       
       // Redirect to dashboard
+      console.log('Redirecting to dashboard...');
       window.location.href = '/dashboard';
     } catch (error) {
+      console.error('Login error:', error);
       const err = error as AxiosError<{ detail?: string }>;
       // Handle common authentication errors from the backend
       if (err.response && err.response.data?.detail) {

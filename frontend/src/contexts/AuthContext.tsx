@@ -56,6 +56,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const isAuthenticated = !!token;
 
   const login = (newToken: string, userData?: User) => {
+    console.log('AuthContext: login called with token:', newToken ? 'YES' : 'NO');
+    console.log('AuthContext: login called with userData:', userData ? 'YES' : 'NO');
+    
     localStorage.setItem('accessToken', newToken);
     setToken(newToken);
     
@@ -63,6 +66,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('userData', JSON.stringify(userData));
       setUser(userData);
     }
+    
+    console.log('AuthContext: After login, token state:', !!newToken);
+    console.log('AuthContext: After login, user state:', !!userData);
+    console.log('AuthContext: isAuthenticated will be:', !!newToken);
   };
 
   const logout = () => {

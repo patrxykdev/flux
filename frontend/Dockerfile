@@ -3,6 +3,9 @@ FROM node:18-alpine as build
 
 WORKDIR /app
 
+# Debug: Show current directory and list files
+RUN pwd && ls -la
+
 # Copy package files explicitly
 COPY package.json package-lock.json ./
 

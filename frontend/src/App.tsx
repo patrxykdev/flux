@@ -18,10 +18,15 @@ console.log('React App is loading...');
 // A helper component to protect routes that require a login
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
+  console.log('ProtectedRoute: isAuthenticated =', isAuthenticated);
+  console.log('ProtectedRoute: localStorage token =', localStorage.getItem('accessToken') ? 'YES' : 'NO');
+  
   if (!isAuthenticated) {
+    console.log('ProtectedRoute: Redirecting to home due to no authentication');
     // If no token, redirect to the login page
     return <Navigate to="/" replace />;
   }
+  console.log('ProtectedRoute: Allowing access to protected route');
   return children;
 };
 
