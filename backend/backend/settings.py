@@ -21,8 +21,7 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = [
     "localhost", 
     "127.0.0.1",   # Remove https://
-    "fluxtrader.xyz",
-    "fluxtrader.xyz/api/"  # Add your frontend domain
+    "fluxtrader.xyz",  # Your production domain
 ]
 # Application definition
 
@@ -55,7 +54,7 @@ ROOT_URLCONF = 'backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'backend', 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
