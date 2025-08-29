@@ -2,7 +2,7 @@
 
 ## Overview
 
-Successfully migrated the Flux trading system from external API data sources (Polygon, Alpha Vantage, yfinance) to local CSV data files. The system now uses CSV data stored in the `data/csv/` directory for backtesting.
+Successfully migrated the Flux trading system from external API data sources (Polygon, Alpha Vantage, yfinance) to local CSV data files. The system now uses CSV data stored in the `backend/data/csv/` directory for backtesting.
 
 ## Changes Made
 
@@ -59,7 +59,7 @@ Successfully migrated the Flux trading system from external API data sources (Po
 ### CSV File Organization
 
 ```
-data/csv/
+backend/data/csv/
 ├── eurusd/
 │   ├── 1m/
 │   ├── 5m/
@@ -148,7 +148,7 @@ data/csv/
 
 ### 1. **Adding New Data**
 
-- Place CSV files in appropriate `data/csv/{ticker}/{timeframe}/` directories
+- Place CSV files in appropriate `backend/data/csv/{ticker}/{timeframe}/` directories
 - Ensure CSV format matches: Date, Open, High, Low, Close, Volume
 - Use tab separator, no headers
 
@@ -161,7 +161,7 @@ data/csv/
 
 ### 3. **Adding New Tickers**
 
-- Create new directory in `data/csv/`
+- Create new directory in `backend/data/csv/`
 - Add timeframe subdirectories
 - Place CSV files in appropriate timeframe directories
 - Restart backend to detect new data

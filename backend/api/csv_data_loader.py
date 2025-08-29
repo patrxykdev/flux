@@ -31,9 +31,9 @@ def load_csv_data(ticker: str, start_date: str, end_date: str, timeframe: str) -
     if timeframe not in timeframe_map:
         raise ValueError(f"Unsupported timeframe: {timeframe}. Supported: {list(timeframe_map.keys())}")
     
-    # Construct path to CSV files - use absolute path from project root
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    csv_dir = os.path.join(project_root, 'data', 'csv', ticker.lower(), timeframe_map[timeframe])
+    # Construct path to CSV files - use path relative to backend directory
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    csv_dir = os.path.join(backend_dir, 'data', 'csv', ticker.lower(), timeframe_map[timeframe])
     
     if not os.path.exists(csv_dir):
         raise ValueError(f"CSV directory not found: {csv_dir}")
@@ -107,8 +107,8 @@ def load_csv_data(ticker: str, start_date: str, end_date: str, timeframe: str) -
 
 def get_available_tickers() -> list:
     """Get list of available tickers from the data directory."""
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    data_dir = os.path.join(project_root, 'data', 'csv')
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(backend_dir, 'data', 'csv')
     if not os.path.exists(data_dir):
         return []
     
@@ -121,8 +121,8 @@ def get_available_tickers() -> list:
 
 def get_available_timeframes(ticker: str) -> list:
     """Get list of available timeframes for a specific ticker."""
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    ticker_dir = os.path.join(project_root, 'data', 'csv', ticker.lower())
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ticker_dir = os.path.join(backend_dir, 'data', 'csv', ticker.lower())
     if not os.path.exists(ticker_dir):
         return []
     
