@@ -100,19 +100,6 @@ def send_verification_email(user, verification_token):
                     border-radius: 8px;
                     border-left: 4px solid #3b82f6;
                 }}
-                .feature-icon {{
-                    width: 24px;
-                    height: 24px;
-                    background-color: #3b82f6;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-right: 15px;
-                    color: white;
-                    font-weight: bold;
-                    font-size: 14px;
-                }}
                 .feature-text {{
                     color: #374151;
                     font-size: 16px;
@@ -158,19 +145,15 @@ def send_verification_email(user, verification_token):
                     
                     <div class="features">
                         <div class="feature">
-                            <div class="feature-icon">1</div>
                             <div class="feature-text">Advanced Strategy Builder</div>
                         </div>
                         <div class="feature">
-                            <div class="feature-icon">2</div>
                             <div class="feature-text">Comprehensive Backtesting</div>
                         </div>
                         <div class="feature">
-                            <div class="feature-icon">3</div>
                             <div class="feature-text">Real-time Market Data</div>
                         </div>
                         <div class="feature">
-                            <div class="feature-icon">4</div>
                             <div class="feature-text">Lightning-fast Execution</div>
                         </div>
                     </div>
@@ -308,19 +291,6 @@ def send_welcome_email(user):
                     border-radius: 8px;
                     border-left: 4px solid #3b82f6;
                 }}
-                .step-number {{
-                    width: 32px;
-                    height: 32px;
-                    background-color: #3b82f6;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-right: 15px;
-                    color: white;
-                    font-weight: bold;
-                    font-size: 16px;
-                }}
                 .step-text {{
                     color: #374151;
                     font-size: 16px;
@@ -358,22 +328,18 @@ def send_welcome_email(user):
                         <h3>Next Steps to Get Started:</h3>
                         
                         <div class="step">
-                            <div class="step-number">1</div>
                             <div class="step-text">Explore the Strategy Builder to create your first trading strategy</div>
                         </div>
                         
                         <div class="step">
-                            <div class="step-number">2</div>
                             <div class="step-text">Run backtests on historical data to validate your strategies</div>
                         </div>
                         
                         <div class="step">
-                            <div class="step-number">3</div>
                             <div class="step-text">Monitor your portfolio performance and track your progress</div>
                         </div>
                         
                         <div class="step">
-                            <div class="step-number">4</div>
                             <div class="step-text">Join our community and share insights with fellow traders</div>
                         </div>
                     </div>

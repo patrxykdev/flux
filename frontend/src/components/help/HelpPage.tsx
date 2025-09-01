@@ -1,17 +1,27 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import './HelpPage.css';
 
 interface HelpSection {
   id: string;
   title: string;
   content: React.ReactNode;
-  category: 'indicators' | 'entry-conditions' | 'exit-conditions' | 'concepts';
+  category: 'indicators' | 'entry-conditions' | 'exit-conditions' | 'concepts' | 'backtester-guide' | 'strategy-builder-guide';
 }
 
 const HelpPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('indicators');
   const [showCategoryGrid, setShowCategoryGrid] = useState(true);
+
+  // Handle URL parameters for direct navigation to specific categories
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam && ['indicators', 'entry-conditions', 'exit-conditions', 'concepts', 'backtester-guide', 'strategy-builder-guide'].includes(categoryParam)) {
+      setSelectedCategory(categoryParam);
+    }
+  }, [searchParams]);
 
   const helpSections: HelpSection[] = [
     // Technical Indicators
@@ -643,6 +653,681 @@ const HelpPage: React.FC = () => {
           </ul>
         </div>
       )
+    },
+
+    // Backtester Guide
+    {
+      id: 'backtester-overview',
+      title: 'Backtester Overview',
+      category: 'backtester-guide',
+      content: (
+        <div>
+          <h3>What is the Backtester?</h3>
+          <p>The backtester allows you to test your trading strategies against historical market data to see how they would have performed in the past. This helps you validate your strategy before risking real money.</p>
+          
+          <h3>Key Benefits:</h3>
+          <ul>
+            <li><strong>Strategy Validation:</strong> Test if your strategy works before live trading</li>
+            <li><strong>Performance Metrics:</strong> Get detailed statistics on returns, win rate, and risk</li>
+            <li><strong>Risk Assessment:</strong> Understand potential drawdowns and volatility</li>
+            <li><strong>Optimization:</strong> Fine-tune parameters for better performance</li>
+          </ul>
+          
+          <h3>How to Access the Backtester:</h3>
+          <ol>
+            <li>Navigate to the Dashboard</li>
+            <li>Click on "Backtest Strategy" or use the navigation menu</li>
+            <li>You'll see the backtester interface with configuration options</li>
+          </ol>
+          
+          <h3>What You'll Need:</h3>
+          <ul>
+            <li>A saved strategy (created in the Strategy Builder)</li>
+            <li>Historical data for your chosen ticker and timeframe</li>
+            <li>Starting capital amount</li>
+            <li>Date range for testing</li>
+          </ul>
+        </div>
+      )
+    },
+    {
+      id: 'backtester-setup',
+      title: 'Setting Up a Backtest',
+      category: 'backtester-guide',
+      content: (
+        <div>
+          <h3>Step-by-Step Backtest Setup</h3>
+          
+          <h4>1. Select Your Strategy</h4>
+          <p>Choose from your saved strategies in the dropdown menu. You must have at least one strategy saved before you can run a backtest.</p>
+          
+          <h4>2. Choose Market Data</h4>
+          <ul>
+            <li><strong>Ticker:</strong> Select the asset you want to test (EURUSD, AAPL, BTC, etc.)</li>
+            <li><strong>Timeframe:</strong> Choose the chart timeframe (1m, 5m, 15m, 1h, 4h, 1d)</li>
+            <li><strong>Date Range:</strong> Set start and end dates for your test period</li>
+          </ul>
+          
+          <h4>3. Configure Capital & Risk</h4>
+          <ul>
+            <li><strong>Starting Capital:</strong> Enter your initial portfolio value (e.g., $10,000)</li>
+            <li><strong>Leverage:</strong> Choose leverage from 1x to 10x (higher leverage = higher risk)</li>
+          </ul>
+          
+          <h4>4. Run the Backtest</h4>
+          <p>Click "Run Backtest" and wait for the analysis to complete. This may take a few moments depending on the data size.</p>
+          
+          <h3>Important Notes:</h3>
+          <ul>
+            <li><strong>Tier Limitations:</strong> Free tier is limited to EURUSD and AAPL with 4h and 1d timeframes</li>
+            <li><strong>Data Availability:</strong> Ensure your selected date range has sufficient historical data</li>
+            <li><strong>Strategy Requirements:</strong> Your strategy must have at least one condition and action defined</li>
+          </ul>
+        </div>
+      )
+    },
+    {
+      id: 'backtester-results',
+      title: 'Understanding Backtest Results',
+      category: 'backtester-guide',
+      content: (
+        <div>
+          <h3>Key Performance Metrics</h3>
+          
+          <h4>Total P&L</h4>
+          <p>The overall percentage return of your strategy over the test period. Positive values indicate profit, negative values indicate loss.</p>
+          
+          <h4>Final Equity</h4>
+          <p>Your portfolio value at the end of the backtest period, including all profits and losses.</p>
+          
+          <h4>Total Trades</h4>
+          <p>The number of completed trades (entries and exits) during the test period.</p>
+          
+          <h4>Win Rate</h4>
+          <p>The percentage of profitable trades. A higher win rate generally indicates a more reliable strategy.</p>
+          
+          <h3>Equity Curve Chart</h3>
+          <p>The equity curve shows how your portfolio value changed over time. Look for:</p>
+          <ul>
+            <li><strong>Consistent Growth:</strong> Steady upward trend indicates a robust strategy</li>
+            <li><strong>Drawdowns:</strong> Temporary declines in portfolio value</li>
+            <li><strong>Volatility:</strong> How much the curve fluctuates</li>
+          </ul>
+          
+          <h3>Trade History Table</h3>
+          <p>Detailed log of every trade showing:</p>
+          <ul>
+            <li><strong>Date & Time:</strong> When the trade occurred</li>
+            <li><strong>Type:</strong> LONG (buy) or EXIT (sell) signals</li>
+            <li><strong>Price:</strong> Entry or exit price</li>
+            <li><strong>Position Size:</strong> Amount invested in the trade</li>
+            <li><strong>Leverage:</strong> Leverage used for the trade</li>
+            <li><strong>Portfolio Value:</strong> Total portfolio value after the trade</li>
+            <li><strong>P&L:</strong> Profit or loss for the trade</li>
+            <li><strong>Exit Reason:</strong> Why the trade was closed (stop loss, take profit, signal)</li>
+          </ul>
+          
+          <h3>Interpreting Results</h3>
+          <ul>
+            <li><strong>Good Strategy:</strong> Positive returns, reasonable drawdowns, consistent performance</li>
+            <li><strong>High Risk:</strong> Large drawdowns, high volatility, inconsistent results</li>
+            <li><strong>Overfitting:</strong> Excellent backtest results that may not work in live trading</li>
+          </ul>
+        </div>
+      )
+    },
+    {
+      id: 'backtester-tips',
+      title: 'Backtesting Best Practices',
+      category: 'backtester-guide',
+      content: (
+        <div>
+          <h3>Best Practices for Reliable Results</h3>
+          
+          <h4>1. Use Sufficient Data</h4>
+          <ul>
+            <li>Test over at least 6-12 months of data</li>
+            <li>Include different market conditions (bull, bear, sideways)</li>
+            <li>Avoid testing on too little data (less than 3 months)</li>
+          </ul>
+          
+          <h4>2. Realistic Parameters</h4>
+          <ul>
+            <li>Use realistic starting capital amounts</li>
+            <li>Don't over-leverage (start with 1x-3x)</li>
+            <li>Include transaction costs in your analysis</li>
+          </ul>
+          
+          <h4>3. Multiple Timeframes</h4>
+          <ul>
+            <li>Test your strategy on different timeframes</li>
+            <li>Higher timeframes (1d, 4h) are generally more reliable</li>
+            <li>Lower timeframes (1m, 5m) may show more noise</li>
+          </ul>
+          
+          <h4>4. Out-of-Sample Testing</h4>
+          <ul>
+            <li>Reserve some data for final validation</li>
+            <li>Don't optimize parameters on the same data you test</li>
+            <li>Test on completely unseen market conditions</li>
+          </ul>
+          
+          <h4>5. Risk Management Focus</h4>
+          <ul>
+            <li>Pay attention to maximum drawdown</li>
+            <li>Ensure your strategy can handle losing streaks</li>
+            <li>Test with different position sizing methods</li>
+          </ul>
+          
+          <h3>Common Pitfalls to Avoid</h3>
+          <ul>
+            <li><strong>Overfitting:</strong> Creating strategies that work perfectly on historical data but fail in live trading</li>
+            <li><strong>Survivorship Bias:</strong> Only testing on assets that performed well</li>
+            <li><strong>Look-Ahead Bias:</strong> Using future information in your strategy</li>
+            <li><strong>Ignoring Costs:</strong> Not accounting for spreads, commissions, and slippage</li>
+          </ul>
+          
+          <h3>When to Trust Your Results</h3>
+          <ul>
+            <li>Consistent performance across different time periods</li>
+            <li>Reasonable drawdowns (less than 20-30%)</li>
+                          <li>Good risk-adjusted returns (Sharpe ratio &gt; 1)</li>
+            <li>Strategy works on multiple assets/timeframes</li>
+          </ul>
+        </div>
+      )
+    },
+
+    // Strategy Builder Guide
+    {
+      id: 'strategy-builder-overview',
+      title: 'Strategy Builder Overview',
+      category: 'strategy-builder-guide',
+      content: (
+        <div>
+          <h3>What is the Strategy Builder?</h3>
+          <p>The Strategy Builder is a visual tool that lets you create custom trading strategies without coding. You can define market conditions, entry/exit rules, and risk management parameters using an intuitive interface.</p>
+          
+          <h3>Key Components:</h3>
+          <ul>
+            <li><strong>Trigger Conditions:</strong> Market conditions that must be met to trigger a trade</li>
+            <li><strong>Action:</strong> What to do when conditions are met (buy or sell)</li>
+            <li><strong>Entry Conditions:</strong> Position sizing and risk management for entries</li>
+            <li><strong>Exit Conditions:</strong> Stop loss and take profit rules</li>
+          </ul>
+          
+          <h3>How to Access the Strategy Builder:</h3>
+          <ol>
+            <li>Navigate to the Dashboard</li>
+            <li>Click on "Strategy Builder" or use the navigation menu</li>
+            <li>You'll see the builder interface with four main sections</li>
+          </ol>
+          
+          <h3>Strategy Builder Interface:</h3>
+          <ul>
+            <li><strong>Header:</strong> Strategy name input and save/load options</li>
+            <li><strong>Navigation Tabs:</strong> Switch between Conditions, Action, Entry, and Exit</li>
+            <li><strong>Main Content:</strong> Configuration options for the selected section</li>
+            <li><strong>Actions Bar:</strong> Save, load, and delete strategies</li>
+          </ul>
+        </div>
+      )
+    },
+    {
+      id: 'building-conditions',
+      title: 'Building Trigger Conditions',
+      category: 'strategy-builder-guide',
+      content: (
+        <div>
+          <h3>Understanding Trigger Conditions</h3>
+          <p>Trigger conditions are the foundation of your strategy. They define what market conditions must be present before your strategy will enter a trade.</p>
+          
+          <h3>Creating Conditions</h3>
+          <h4>1. Add a Condition</h4>
+          <p>Click the "Add Condition" button to create your first condition. Each condition has three parts:</p>
+          <ul>
+            <li><strong>Indicator:</strong> What to measure (RSI, MACD, Price, etc.)</li>
+            <li><strong>Operator:</strong> How to compare (greater than, less than, crosses above, etc.)</li>
+            <li><strong>Value:</strong> The threshold or comparison value</li>
+          </ul>
+          
+          <h4>2. Configure Parameters</h4>
+          <p>Many indicators have parameters you can adjust:</p>
+          <ul>
+            <li><strong>RSI:</strong> Period (default 14) - how many bars to calculate</li>
+            <li><strong>MACD:</strong> Fast period, slow period, signal period</li>
+            <li><strong>Moving Averages:</strong> Period for the average calculation</li>
+            <li><strong>Bollinger Bands:</strong> Period and standard deviation multiplier</li>
+          </ul>
+          
+          <h4>3. Set Comparison Values</h4>
+          <p>Enter the values your indicator must meet:</p>
+          <ul>
+            <li><strong>RSI &gt; 70:</strong> RSI must be above 70 (overbought)</li>
+            <li><strong>Price crosses above SMA:</strong> Price breaks above moving average</li>
+            <li><strong>MACD &gt; 0:</strong> MACD line is above zero</li>
+          </ul>
+          
+          <h3>Logical Operators</h3>
+          <p>When you have multiple conditions, choose how they work together:</p>
+          <ul>
+            <li><strong>AND:</strong> All conditions must be true (more restrictive)</li>
+            <li><strong>OR:</strong> Any condition can be true (more permissive)</li>
+          </ul>
+          
+          <h3>Example Conditions</h3>
+          <ul>
+            <li><strong>RSI &lt; 30 AND Price &gt; SMA(20):</strong> Oversold in an uptrend</li>
+            <li><strong>MACD crosses above Signal OR RSI &gt; 50:</strong> Momentum or strength</li>
+            <li><strong>Price between Bollinger Lower and Middle:</strong> Mean reversion setup</li>
+          </ul>
+          
+          <h3>Tips for Effective Conditions</h3>
+          <ul>
+            <li>Start simple with 1-2 conditions</li>
+            <li>Use AND for confirmation, OR for flexibility</li>
+            <li>Test different parameter values</li>
+            <li>Avoid too many conditions (can overfit)</li>
+          </ul>
+        </div>
+      )
+    },
+    {
+      id: 'setting-actions',
+      title: 'Setting Actions',
+      category: 'strategy-builder-guide',
+      content: (
+        <div>
+          <h3>Understanding Actions</h3>
+          <p>Actions define what your strategy does when all trigger conditions are met. You can choose to go LONG (buy) or SHORT (sell) the asset.</p>
+          
+          <h3>Action Types</h3>
+          
+          <h4>LONG (Buy)</h4>
+          <p>Your strategy will buy the asset when conditions are met. This is used for:</p>
+          <ul>
+            <li>Bullish strategies (expecting price to rise)</li>
+            <li>Oversold bounces</li>
+            <li>Breakout strategies</li>
+            <li>Trend-following in uptrends</li>
+          </ul>
+          
+          <h4>SHORT (Sell)</h4>
+          <p>Your strategy will sell the asset when conditions are met. This is used for:</p>
+          <ul>
+            <li>Bearish strategies (expecting price to fall)</li>
+            <li>Overbought reversals</li>
+            <li>Breakdown strategies</li>
+            <li>Trend-following in downtrends</li>
+          </ul>
+          
+          <h3>Choosing the Right Action</h3>
+          <p>Consider your market outlook and strategy logic:</p>
+          <ul>
+            <li><strong>Bullish Conditions + LONG:</strong> RSI oversold + uptrend = buy the dip</li>
+            <li><strong>Bearish Conditions + SHORT:</strong> RSI overbought + downtrend = sell the rally</li>
+            <li><strong>Breakout + LONG:</strong> Price breaks resistance = follow the breakout</li>
+            <li><strong>Breakdown + SHORT:</strong> Price breaks support = follow the breakdown</li>
+          </ul>
+          
+          <h3>Action Configuration</h3>
+          <p>Simply click on LONG or SHORT to select your action. The selected action will be highlighted, and this will be used for all trades generated by your strategy.</p>
+          
+          <h3>Strategy Logic Examples</h3>
+          <ul>
+            <li><strong>Mean Reversion:</strong> Oversold conditions + LONG action</li>
+            <li><strong>Momentum:</strong> Strong momentum + LONG action</li>
+            <li><strong>Trend Following:</strong> Trend confirmation + LONG/SHORT based on direction</li>
+            <li><strong>Breakout:</strong> Breakout conditions + LONG action</li>
+          </ul>
+        </div>
+      )
+    },
+    {
+      id: 'entry-conditions',
+      title: 'Configuring Entry Conditions',
+      category: 'strategy-builder-guide',
+      content: (
+        <div>
+          <h3>Understanding Entry Conditions</h3>
+          <p>Entry conditions determine how much capital to risk on each trade. This is crucial for risk management and position sizing.</p>
+          
+          <h3>Position Sizing Methods</h3>
+          
+          <h4>1. Fixed Percentage</h4>
+          <p>Risk a fixed percentage of your portfolio on each trade.</p>
+          <ul>
+            <li><strong>Example:</strong> 2% of $10,000 = $200 per trade</li>
+            <li><strong>Pros:</strong> Simple, scales with portfolio growth</li>
+            <li><strong>Cons:</strong> Doesn't consider trade-specific risk</li>
+          </ul>
+          
+          <h4>2. Fixed Dollar Amount</h4>
+          <p>Risk a fixed dollar amount regardless of portfolio size.</p>
+          <ul>
+            <li><strong>Example:</strong> Always risk $500 per trade</li>
+            <li><strong>Pros:</strong> Consistent risk exposure</li>
+            <li><strong>Cons:</strong> Doesn't scale with portfolio growth</li>
+          </ul>
+          
+          <h4>3. Risk-Based Sizing</h4>
+          <p>Calculate position size based on stop loss distance.</p>
+          <ul>
+            <li><strong>Example:</strong> Risk 1% of portfolio, stop loss 2% away = 50% position</li>
+            <li><strong>Pros:</strong> Consistent risk per trade</li>
+            <li><strong>Cons:</strong> Requires stop loss calculation</li>
+          </ul>
+          
+          <h4>4. Kelly Criterion</h4>
+          <p>Optimal position sizing based on win rate and risk/reward ratio.</p>
+          <ul>
+            <li><strong>Formula:</strong> Kelly % = (Win Rate × Avg Win - Loss Rate × Avg Loss) / Avg Win</li>
+            <li><strong>Pros:</strong> Mathematically optimal for long-term growth</li>
+            <li><strong>Cons:</strong> Can suggest very large positions</li>
+          </ul>
+          
+          <h4>5. Volatility-Based</h4>
+          <p>Adjust position size based on market volatility (ATR).</p>
+          <ul>
+            <li><strong>Example:</strong> Larger positions in low volatility, smaller in high volatility</li>
+            <li><strong>Pros:</strong> Adapts to market conditions</li>
+            <li><strong>Cons:</strong> More complex to implement</li>
+          </ul>
+          
+          <h3>Configuration Options</h3>
+          <p>For each method, you can set:</p>
+          <ul>
+            <li><strong>Risk Per Trade:</strong> Percentage of portfolio to risk</li>
+            <li><strong>Max Position Size:</strong> Maximum percentage of portfolio in one trade</li>
+            <li><strong>Volatility Period:</strong> Number of days for ATR calculation</li>
+          </ul>
+          
+          <h3>Best Practices</h3>
+          <ul>
+            <li>Start with 1-2% risk per trade</li>
+            <li>Never risk more than 5% on a single trade</li>
+            <li>Use max position size limits (10-20%)</li>
+            <li>Consider using risk-based sizing for better risk management</li>
+          </ul>
+        </div>
+      )
+    },
+    {
+      id: 'exit-conditions',
+      title: 'Configuring Exit Conditions',
+      category: 'strategy-builder-guide',
+      content: (
+        <div>
+          <h3>Understanding Exit Conditions</h3>
+          <p>Exit conditions define when to close your positions to lock in profits or limit losses. This is essential for risk management.</p>
+          
+          <h3>Stop Loss Options</h3>
+          
+          <h4>1. Fixed Percentage</h4>
+          <p>Exit when price moves against you by a fixed percentage.</p>
+          <ul>
+            <li><strong>Example:</strong> 5% stop loss on a $100 stock = exit at $95</li>
+            <li><strong>Pros:</strong> Simple and effective</li>
+            <li><strong>Cons:</strong> Doesn't adapt to volatility</li>
+          </ul>
+          
+          <h4>2. Fixed Dollar Amount</h4>
+          <p>Exit when you lose a fixed dollar amount.</p>
+          <ul>
+            <li><strong>Example:</strong> $200 stop loss regardless of position size</li>
+            <li><strong>Pros:</strong> Consistent dollar risk</li>
+            <li><strong>Cons:</strong> May be too tight or loose for different positions</li>
+          </ul>
+          
+          <h4>3. Trailing Percentage</h4>
+          <p>Stop loss that moves with favorable price movement.</p>
+          <ul>
+            <li><strong>Example:</strong> 5% trailing stop that activates after 3% profit</li>
+            <li><strong>Pros:</strong> Locks in profits while letting winners run</li>
+            <li><strong>Cons:</strong> Can exit too early in volatile markets</li>
+          </ul>
+          
+          <h4>4. ATR-Based</h4>
+          <p>Stop loss based on Average True Range (volatility).</p>
+          <ul>
+            <li><strong>Example:</strong> 2x ATR stop loss</li>
+            <li><strong>Pros:</strong> Adapts to market volatility</li>
+            <li><strong>Cons:</strong> Requires ATR calculation</li>
+          </ul>
+          
+          <h4>5. Support/Resistance Level</h4>
+          <p>Stop loss at key price levels.</p>
+          <ul>
+            <li><strong>Example:</strong> Stop below recent support level</li>
+            <li><strong>Pros:</strong> Uses market structure</li>
+            <li><strong>Cons:</strong> Requires manual level identification</li>
+          </ul>
+          
+          <h3>Take Profit Options</h3>
+          
+          <h4>1. Fixed Percentage</h4>
+          <p>Exit when price moves in your favor by a fixed percentage.</p>
+          <ul>
+            <li><strong>Example:</strong> 10% profit target</li>
+            <li><strong>Pros:</strong> Simple profit taking</li>
+            <li><strong>Cons:</strong> May exit too early or too late</li>
+          </ul>
+          
+          <h4>2. Risk:Reward Ratio</h4>
+          <p>Profit target based on your risk amount.</p>
+          <ul>
+            <li><strong>Example:</strong> 1:2 risk:reward (risk $100 to make $200)</li>
+            <li><strong>Pros:</strong> Ensures positive expectancy</li>
+            <li><strong>Cons:</strong> May not be achievable in all market conditions</li>
+          </ul>
+          
+          <h4>3. Indicator-Based</h4>
+          <p>Exit based on technical indicator signals.</p>
+          <ul>
+            <li><strong>Example:</strong> Exit when RSI reaches 70 (overbought)</li>
+            <li><strong>Pros:</strong> Uses market momentum</li>
+            <li><strong>Cons:</strong> May exit before full profit potential</li>
+          </ul>
+          
+          <h3>Configuration Tips</h3>
+          <ul>
+            <li>Start with 2-5% stop losses</li>
+            <li>Use 1:2 or 1:3 risk:reward ratios</li>
+            <li>Consider trailing stops for trending markets</li>
+            <li>Use ATR-based stops in volatile markets</li>
+            <li>Test different exit combinations</li>
+          </ul>
+          
+          <h3>Exit Strategy Examples</h3>
+          <ul>
+            <li><strong>Conservative:</strong> 3% stop loss + 6% profit target (1:2 ratio)</li>
+            <li><strong>Aggressive:</strong> 5% stop loss + 15% profit target (1:3 ratio)</li>
+            <li><strong>Trend Following:</strong> 2x ATR stop loss + trailing stop</li>
+            <li><strong>Mean Reversion:</strong> 2% stop loss + RSI 70 exit</li>
+          </ul>
+        </div>
+      )
+    },
+    {
+      id: 'saving-strategies',
+      title: 'Saving and Managing Strategies',
+      category: 'strategy-builder-guide',
+      content: (
+        <div>
+          <h3>Saving Your Strategy</h3>
+          <p>Once you've configured your strategy, you need to save it before you can use it for backtesting.</p>
+          
+          <h4>1. Name Your Strategy</h4>
+          <p>Enter a descriptive name in the strategy name field. Good names include:</p>
+          <ul>
+            <li>"RSI Oversold Bounce"</li>
+            <li>"MACD Crossover Long"</li>
+            <li>"Bollinger Band Mean Reversion"</li>
+            <li>"Moving Average Trend Following"</li>
+          </ul>
+          
+          <h4>2. Save the Strategy</h4>
+          <p>Click the "Save Strategy" button. You'll see a confirmation message when it's saved successfully.</p>
+          
+          <h4>3. Verify Your Strategy</h4>
+          <p>Make sure all sections are configured:</p>
+          <ul>
+            <li>✓ At least one trigger condition</li>
+            <li>✓ Action selected (LONG or SHORT)</li>
+            <li>✓ Entry conditions configured</li>
+            <li>✓ Exit conditions configured</li>
+          </ul>
+          
+          <h3>Loading Existing Strategies</h3>
+          <p>To modify an existing strategy:</p>
+          <ol>
+            <li>Select the strategy from the "Load Strategy" dropdown</li>
+            <li>The strategy will load with all its settings</li>
+            <li>Make your modifications</li>
+            <li>Save with the same name or a new name</li>
+          </ol>
+          
+          <h3>Deleting Strategies</h3>
+          <p>To remove a strategy you no longer need:</p>
+          <ol>
+            <li>Load the strategy you want to delete</li>
+            <li>Click the "Delete" button</li>
+            <li>Confirm the deletion in the popup</li>
+            <li>The strategy will be permanently removed</li>
+          </ol>
+          
+          <h3>Strategy Management Tips</h3>
+          <ul>
+            <li><strong>Version Control:</strong> Save different versions with descriptive names</li>
+            <li><strong>Backup Important Strategies:</strong> Keep copies of your best-performing strategies</li>
+            <li><strong>Documentation:</strong> Use clear names that describe the strategy logic</li>
+            <li><strong>Testing:</strong> Always backtest before saving new strategies</li>
+          </ul>
+          
+          <h3>Common Issues</h3>
+          <ul>
+            <li><strong>Can't Save:</strong> Make sure you have a strategy name and all required sections configured</li>
+            <li><strong>Strategy Not Loading:</strong> Check that the strategy exists and you have permission to access it</li>
+            <li><strong>Delete Failed:</strong> Make sure you're not trying to delete a strategy that's currently being used</li>
+          </ul>
+        </div>
+      )
+    },
+    {
+      id: 'strategy-examples',
+      title: 'Strategy Examples',
+      category: 'strategy-builder-guide',
+      content: (
+        <div>
+          <h3>Example 1: RSI Oversold Bounce</h3>
+          <p>A mean reversion strategy that buys when RSI indicates oversold conditions.</p>
+          
+          <h4>Trigger Conditions:</h4>
+          <ul>
+            <li>RSI &lt; 30 (oversold)</li>
+            <li>Price &gt; SMA(20) (uptrend filter)</li>
+          </ul>
+          
+          <h4>Action:</h4>
+          <p>LONG (buy the dip)</p>
+          
+          <h4>Entry Conditions:</h4>
+          <ul>
+            <li>Position Sizing: Fixed Percentage (2%)</li>
+            <li>Max Position Size: 10%</li>
+          </ul>
+          
+          <h4>Exit Conditions:</h4>
+          <ul>
+            <li>Stop Loss: Fixed Percentage (3%)</li>
+            <li>Take Profit: Risk:Reward Ratio (1:2)</li>
+          </ul>
+          
+          <h3>Example 2: MACD Momentum Strategy</h3>
+          <p>A trend-following strategy that trades MACD crossovers.</p>
+          
+          <h4>Trigger Conditions:</h4>
+          <ul>
+            <li>MACD crosses above Signal Line</li>
+            <li>MACD &gt; 0 (bullish momentum)</li>
+          </ul>
+          
+          <h4>Action:</h4>
+          <p>LONG (follow the momentum)</p>
+          
+          <h4>Entry Conditions:</h4>
+          <ul>
+            <li>Position Sizing: Risk-Based (1% risk per trade)</li>
+            <li>Max Position Size: 15%</li>
+          </ul>
+          
+          <h4>Exit Conditions:</h4>
+          <ul>
+            <li>Stop Loss: ATR-Based (2x ATR)</li>
+            <li>Take Profit: Trailing Stop (5% trailing, activates at 3% profit)</li>
+          </ul>
+          
+          <h3>Example 3: Bollinger Band Breakout</h3>
+          <p>A breakout strategy that trades when price breaks above Bollinger Bands.</p>
+          
+          <h4>Trigger Conditions:</h4>
+          <ul>
+            <li>Price crosses above Bollinger Upper Band</li>
+                          <li>Volume &gt; SMA(20) (volume confirmation)</li>
+          </ul>
+          
+          <h4>Action:</h4>
+          <p>LONG (follow the breakout)</p>
+          
+          <h4>Entry Conditions:</h4>
+          <ul>
+            <li>Position Sizing: Kelly Criterion (max 20%)</li>
+            <li>Risk Per Trade: 2%</li>
+          </ul>
+          
+          <h4>Exit Conditions:</h4>
+          <ul>
+            <li>Stop Loss: Fixed Percentage (4%)</li>
+            <li>Take Profit: Fixed Percentage (12%)</li>
+          </ul>
+          
+          <h3>Example 4: Moving Average Crossover</h3>
+          <p>A classic trend-following strategy using moving average crossovers.</p>
+          
+          <h4>Trigger Conditions:</h4>
+          <ul>
+            <li>SMA(10) crosses above SMA(20)</li>
+            <li>Price &gt; SMA(50) (long-term trend filter)</li>
+          </ul>
+          
+          <h4>Action:</h4>
+          <p>LONG (follow the trend)</p>
+          
+          <h4>Entry Conditions:</h4>
+          <ul>
+            <li>Position Sizing: Volatility-Based (ATR period: 20)</li>
+            <li>Max Position Size: 12%</li>
+          </ul>
+          
+          <h4>Exit Conditions:</h4>
+          <ul>
+            <li>Stop Loss: Support/Resistance Level</li>
+            <li>Take Profit: Risk:Reward Ratio (1:3)</li>
+          </ul>
+          
+          <h3>Building Your Own Strategy</h3>
+          <p>Start with these examples and modify them:</p>
+          <ol>
+            <li>Choose a strategy concept (mean reversion, momentum, breakout, trend-following)</li>
+            <li>Select appropriate indicators for your concept</li>
+            <li>Set logical conditions and operators</li>
+            <li>Choose appropriate position sizing</li>
+            <li>Configure risk management (stop loss and take profit)</li>
+            <li>Test with backtesting</li>
+            <li>Refine based on results</li>
+          </ol>
+        </div>
+      )
     }
   ];
 
@@ -663,7 +1348,9 @@ const HelpPage: React.FC = () => {
     { id: 'indicators', label: 'Technical Indicators', count: helpSections.filter(s => s.category === 'indicators').length },
     { id: 'entry-conditions', label: 'Entry Conditions', count: helpSections.filter(s => s.category === 'entry-conditions').length },
     { id: 'exit-conditions', label: 'Exit Conditions', count: helpSections.filter(s => s.category === 'exit-conditions').length },
-    { id: 'concepts', label: 'Trading Concepts', count: helpSections.filter(s => s.category === 'concepts').length }
+    { id: 'concepts', label: 'Trading Concepts', count: helpSections.filter(s => s.category === 'concepts').length },
+    { id: 'backtester-guide', label: 'Backtester Guide', count: helpSections.filter(s => s.category === 'backtester-guide').length },
+    { id: 'strategy-builder-guide', label: 'Strategy Builder Guide', count: helpSections.filter(s => s.category === 'strategy-builder-guide').length }
   ];
 
   const handleCategoryClick = (categoryId: string) => {
@@ -689,32 +1376,181 @@ const HelpPage: React.FC = () => {
     }
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'indicators':
+
+
+  const getSectionIcon = (sectionId: string) => {
+    switch (sectionId) {
+      // Technical Indicators
+      case 'rsi':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M7 7l3 3-3 3m4-4l3 3-3 3" />
+          </svg>
+        );
+      case 'macd':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M7 7l3 3-3 3m4-4l3 3-3 3" />
+          </svg>
+        );
+      case 'sma':
+      case 'ema':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M6 6l3 3-3 3m6 0l3 3-3 3" />
+          </svg>
+        );
+      case 'bollinger-bands':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M3 9h18M3 15h18" />
+          </svg>
+        );
+      case 'stochastic':
+      case 'williams-r':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
+          </svg>
+        );
+      case 'atr':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M3 12h18M6 6l3 3-3 3m6 6l3 3-3 3" />
+          </svg>
+        );
+      case 'volume':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
+          </svg>
+        );
+      case 'close':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      
+      // Entry Conditions
+      case 'position-sizing':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      
+      // Exit Conditions
+      case 'stop-loss':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+        );
+      case 'trailing-stop':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M6 6l3 3-3 3m6 0l3 3-3 3" />
+          </svg>
+        );
+      case 'take-profit':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" />
+          </svg>
+        );
+      
+      // Concepts
+      case 'kelly-criterion':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59" />
+          </svg>
+        );
+      case 'risk-management':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.623 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          </svg>
+        );
+      case 'trend-analysis':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M6 6l3 3-3 3m6 0l3 3-3 3" />
+          </svg>
+        );
+      
+      // Backtester Guide - Better icons
+      case 'backtester-overview':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        );
+      case 'backtester-setup':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        );
+      case 'backtester-results':
         return (
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
           </svg>
         );
+      case 'backtester-tips':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+          </svg>
+        );
+      
+      // Strategy Builder Guide - Better icons
+      case 'strategy-builder-overview':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 2.25L9 9l-6.75 6.75M15.75 2.25L9 9l-6.75 6.75" />
+          </svg>
+        );
+      case 'building-conditions':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.623 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          </svg>
+        );
+      case 'setting-actions':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+        );
       case 'entry-conditions':
         return (
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
           </svg>
         );
       case 'exit-conditions':
         return (
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
         );
-      case 'concepts':
+      case 'saving-strategies':
         return (
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
           </svg>
         );
+      case 'strategy-examples':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.75l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59" />
+          </svg>
+        );
+      
       default:
         return (
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -742,6 +1578,17 @@ const HelpPage: React.FC = () => {
     if (title.includes('Kelly')) return 'Optimal position sizing formula';
     if (title.includes('Risk Management')) return 'Portfolio protection principles';
     if (title.includes('Trend Analysis')) return 'Market direction identification';
+    if (title.includes('Backtester Overview')) return 'Introduction to strategy backtesting';
+    if (title.includes('Setting Up a Backtest')) return 'Step-by-step backtest configuration';
+    if (title.includes('Understanding Backtest Results')) return 'How to interpret backtest performance';
+    if (title.includes('Backtesting Best Practices')) return 'Tips for reliable backtest results';
+    if (title.includes('Strategy Builder Overview')) return 'Introduction to visual strategy creation';
+    if (title.includes('Building Trigger Conditions')) return 'Creating market condition rules';
+    if (title.includes('Setting Actions')) return 'Defining buy/sell signals';
+    if (title.includes('Configuring Entry Conditions')) return 'Position sizing and risk management';
+    if (title.includes('Configuring Exit Conditions')) return 'Stop loss and take profit setup';
+    if (title.includes('Saving and Managing Strategies')) return 'Strategy storage and organization';
+    if (title.includes('Strategy Examples')) return 'Complete strategy templates and examples';
     return 'Click to learn more about this topic';
   };
 
@@ -808,8 +1655,8 @@ const HelpPage: React.FC = () => {
                       className="grid-item"
                       onClick={() => scrollToSection(section.id)}
                     >
-                      <div className="grid-item-icon">
-                        {getCategoryIcon(section.category)}
+                      <div className={`grid-item-icon ${section.category}`}>
+                        {getSectionIcon(section.id)}
                       </div>
                       <h3>{section.title}</h3>
                       <p>{getCategoryDescription(section.title)}</p>

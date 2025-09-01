@@ -218,6 +218,16 @@
   color: #ffffff;
 }
 
+.section-category.backtester-guide {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  color: #ffffff;
+}
+
+.section-category.strategy-builder-guide {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: #ffffff;
+}
+
 .section-content {
   color: #475569;
   line-height: 1.7;
@@ -318,6 +328,30 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.grid-item-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s ease;
+}
+
+.grid-item:hover .grid-item-icon::before {
+  left: 100%;
+}
+
+.grid-item:hover .grid-item-icon {
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(13, 110, 253, 0.3);
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
 }
 
 .grid-item h3 {
@@ -382,6 +416,65 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     border-color: #e2e8f0;
   }
+}
+
+/* Enhanced icon animations */
+.grid-item-icon svg {
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(13, 110, 253, 0.2));
+}
+
+.grid-item:hover .grid-item-icon svg {
+  filter: drop-shadow(0 4px 8px rgba(13, 110, 253, 0.4));
+  transform: rotate(5deg);
+}
+
+/* Icon animations */
+@keyframes iconPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.grid-item-icon svg {
+  animation: iconPulse 3s ease-in-out infinite;
+}
+
+/* Icon color variations based on category */
+.grid-item-icon.indicators {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  color: #10b981;
+}
+
+.grid-item-icon.entry-conditions {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  color: #f59e0b;
+}
+
+.grid-item-icon.exit-conditions {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  color: #ef4444;
+}
+
+.grid-item-icon.concepts {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  color: #8b5cf6;
+}
+
+.grid-item-icon.backtester-guide {
+  background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+  color: #06b6d4;
+}
+
+.grid-item-icon.strategy-builder-guide {
+  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+  color: #f97316;
 }
 
 /* Responsive Design */

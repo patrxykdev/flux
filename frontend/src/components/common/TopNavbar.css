@@ -89,6 +89,7 @@
   transition: all 0.3s ease;
   position: relative;
   padding: 0.5rem 0;
+  white-space: nowrap;
 }
 
 .nav-link::after {

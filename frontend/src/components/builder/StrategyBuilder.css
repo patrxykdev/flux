@@ -63,21 +63,210 @@
   font-weight: 400;
 }
 
-.header-right .strategy-loader .strategy-select {
-  min-width: 220px;
-  padding: 0.75rem 1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: white;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+
+/* Help Button Styling */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-.header-right .strategy-loader .strategy-select:focus {
+.help-button {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #0d6efd;
+  border: 2px solid #0d6efd;
+  padding: 0.875rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+  min-height: 48px;
+  letter-spacing: 0.02em;
+  font-family: inherit;
+  text-decoration: none;
+  line-height: 1.2;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  text-transform: none;
+}
+
+.help-button:hover {
+  background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(13, 110, 253, 0.25);
+  border-color: #0d6efd;
+  border-radius: 14px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.help-button:active {
+  transform: translateY(0px);
+  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.2);
+}
+
+.help-button:focus {
   outline: none;
-  border-color: var(--primary-blue);
-  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.3), 0 2px 8px rgba(13, 110, 253, 0.15);
+}
+
+.help-button svg {
+  transition: all 0.25s ease;
+  stroke-width: 2;
+  color: inherit;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.help-button:hover svg {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+/* Load Strategy Button Styling - matches help button */
+.load-strategy-button {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #0d6efd;
+  border: 2px solid #0d6efd;
+  padding: 0.875rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+  min-height: 48px;
+  letter-spacing: 0.02em;
+  font-family: inherit;
+  text-decoration: none;
+  line-height: 1.2;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  text-transform: none;
+}
+
+.load-strategy-button:hover {
+  background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(13, 110, 253, 0.25);
+  border-color: #0d6efd;
+  border-radius: 14px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.load-strategy-button:active {
+  transform: translateY(0px);
+  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.2);
+}
+
+.load-strategy-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.3), 0 2px 8px rgba(13, 110, 253, 0.15);
+}
+
+.load-strategy-button svg {
+  transition: all 0.25s ease;
+  stroke-width: 2;
+  color: inherit;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.load-strategy-button:hover svg {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+/* Dropdown Container */
+.load-strategy-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* Dropdown Arrow */
+.dropdown-arrow {
+  transition: transform 0.25s ease;
+  margin-left: 0.5rem;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 200px;
+  max-width: 300px;
+  overflow: hidden;
+  animation: dropdownSlideIn 0.2s ease-out;
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dropdown Items */
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover:not(.disabled) {
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.05) 0%, rgba(13, 110, 253, 0.02) 100%);
+  color: var(--primary-blue);
+  transform: translateX(4px);
+}
+
+.dropdown-item.disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+  font-style: italic;
 }
 
 /* Strategy Actions Bar */

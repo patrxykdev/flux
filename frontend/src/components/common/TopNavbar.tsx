@@ -49,7 +49,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onLoginClick }) => {
         </div>
         
         <div className="navbar-actions">
-          <button className="get-started-btn" onClick={() => scrollToSection('features')}>
+          <button className="get-started-btn" onClick={() => scrollToSection('pricing')}>
             Get Started
           </button>
           <button className="login-btn" onClick={onLoginClick}>

@@ -16,12 +16,74 @@
 .header-left, .header-right {
   display: flex;
   align-items: center;
+  gap: 1rem;
 }
 
 .back-to-dashboard-button { 
   text-decoration: none; 
   color: var(--primary-blue); 
   font-weight: 500; 
+}
+
+/* Help Button Styling */
+.help-button {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #0d6efd;
+  border: 2px solid #0d6efd;
+  padding: 0.875rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+  min-height: 48px;
+  letter-spacing: 0.02em;
+  font-family: inherit;
+  text-decoration: none;
+  line-height: 1.2;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  text-transform: none;
+}
+
+.help-button:hover {
+  background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(13, 110, 253, 0.25);
+  border-color: #0d6efd;
+  border-radius: 14px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.help-button:active {
+  transform: translateY(0px);
+  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.2);
+}
+
+.help-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.3), 0 2px 8px rgba(13, 110, 253, 0.15);
+}
+
+.help-button svg {
+  transition: all 0.25s ease;
+  stroke-width: 2;
+  color: inherit;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.help-button:hover svg {
+  transform: scale(1.1);
+  opacity: 1;
 }
 
 /* Recent Backtests Button - Elegant Styling */

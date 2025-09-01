@@ -29,6 +29,22 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'password', 'profile', 'email_verified', 'tier', 'strategy_limit', 'daily_backtest_limit']
         extra_kwargs = {'password': {'write_only': True}} # Password shouldn't be readable
 
+    def validate_email(self, value):
+        """
+        Validate that the email is unique across all users.
+        """
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_username(self, value):
+        """
+        Validate that the username is unique across all users.
+        """
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
     def create(self, validated_data):
         # Use the create_user method to handle password hashing
         user = User.objects.create_user(

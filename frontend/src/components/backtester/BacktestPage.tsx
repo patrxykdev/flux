@@ -223,6 +223,17 @@ const BacktestPage: React.FC = () => {
           <Link to="/dashboard" className="back-to-dashboard-button">← Back to Dashboard</Link>
         </div>
         <div className="header-right">
+          <Link 
+            to="/help?category=backtester-guide" 
+            className="help-button"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Help
+          </Link>
           <button 
             onClick={() => setShowRecentBacktests(true)} 
             className="recent-backtests-btn"
